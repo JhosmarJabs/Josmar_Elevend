@@ -1,0 +1,83 @@
+[
+  {
+    "id": 1,
+    "nombre": "Juan",
+    "aPaterno": "Pérez",
+    "aMaterno": "Gómez",
+    "telefono": 7894561230,
+    "fecha": "2024-06-01"
+  },
+  {
+    "id": 2,
+    "nombre": "María",
+    "aPaterno": "López",
+    "aMaterno": "Hernández",
+    "telefono": 4751234567,
+    "fecha": "2024-06-01"
+  },
+  {
+    "id": 3,
+    "nombre": "Pedro",
+    "aPaterno": "García",
+    "aMaterno": "Martínez",
+    "telefono": 1234567890,
+    "fecha": "2024-06-02"
+  },
+  {
+    "id": 4,
+    "nombre": "Ana",
+    "aPaterno": "Sánchez",
+    "aMaterno": "Ramírez",
+    "telefono": 7789456123,
+    "fecha": "2024-06-02"
+  },
+  {
+    "id": 5,
+    "nombre": "Luis",
+    "aPaterno": "Torres",
+    "aMaterno": "Ruiz",
+    "telefono": 8124567891,
+    "fecha": "2024-06-03"
+  },
+  {
+    "id": 6,
+    "nombre": "Laura",
+    "aPaterno": "Morales",
+    "aMaterno": "Cruz",
+    "telefono": 8174569358,
+    "fecha": "2024-06-01"
+  },
+  {
+    "id": 7,
+    "nombre": "Carlos",
+    "aPaterno": "Reyes",
+    "aMaterno": "Vásquez",
+    "telefono": 4831597532,
+    "fecha": "2024-06-03"
+  },
+  {
+    "id": 8,
+    "nombre": "Juan",
+    "aPaterno": "López",
+    "aMaterno": "Salazar",
+    "telefono": 7756983245,
+    "fecha": "2024-06-01"
+  },
+  {
+    "id": 9,
+    "nombre": "María",
+    "aPaterno": "Mendoza",
+    "aMaterno": "Ramírez",
+    "telefono": 8175398743,
+    "fecha": "2024-06-02"
+  },
+  {
+    "id": 10,
+    "nombre": "Isabel",
+    "aPaterno": "Pérez",
+    "aMaterno": "Gómez",
+    "telefono": 7894561235,
+    "fecha": "2024-06-03"
+  }
+]
+  

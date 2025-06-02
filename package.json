@@ -1,0 +1,14 @@
+{
+  "name": "name_proyect",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Josmar",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/d3": "^7.4.3"
+  }
+}
