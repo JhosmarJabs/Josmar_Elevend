@@ -32,71 +32,58 @@ var pantallaUsuarios;
         }
         cargarUsuariosDesdeJSON() {
             return __awaiter(this, void 0, void 0, function* () {
-                const respuesta = yield fetch("usuarios.json");
-                const datos = yield respuesta.json();
-                this.usuariosMapeados = new Map(datos.map(usuario => [usuario.id, Object.assign(Object.assign({}, usuario), { fecha: new Date(usuario.fecha), eModificado: false })]));
-                this.actualizarArrayUsuarios();
-            });
-        }
-        usuarioTieneCambios(usuarioExistente, usuarioNuevo) {
-            return (usuarioExistente.nombre !== usuarioNuevo.nombre ||
-                usuarioExistente.aPaterno !== usuarioNuevo.aPaterno ||
-                usuarioExistente.aMaterno !== usuarioNuevo.aMaterno ||
-                usuarioExistente.telefono !== usuarioNuevo.telefono ||
-                usuarioExistente.fecha.getTime() !== usuarioNuevo.fecha.getTime());
-        }
-        agregarUsuarioNuevo(usuario) {
-            this.usuariosMapeados.set(usuario.id, usuario);
-        }
-        actualizarUsuarioExistente(usuarioNuevo) {
-            usuarioNuevo.eModificado = true;
-            this.usuariosMapeados.set(usuarioNuevo.id, usuarioNuevo);
-        }
-        procesarDatosApilados(datosNuevos) {
-            const resultado = {
-                nuevos: 0,
-                actualizados: 0,
-                sinCambios: 0,
-                totalCambios: 0,
-                detalles: {
-                    nuevos: [],
-                    actualizados: [],
-                    sinCambios: []
-                }
-            };
-            datosNuevos.forEach(usuarioNuevo => {
-                const usuarioConFecha = Object.assign(Object.assign({}, usuarioNuevo), { fecha: new Date(usuarioNuevo.fecha), eModificado: false });
-                const usuarioExistente = this.usuariosMapeados.get(usuarioNuevo.id);
-                if (!usuarioExistente) {
-                    this.agregarUsuarioNuevo(usuarioConFecha);
-                    resultado.nuevos++;
-                    resultado.detalles.nuevos.push(usuarioConFecha);
-                }
-                else if (this.usuarioTieneCambios(usuarioExistente, usuarioConFecha)) {
-                    this.actualizarUsuarioExistente(usuarioConFecha);
-                    resultado.actualizados++;
-                    resultado.detalles.actualizados.push(usuarioConFecha);
-                }
-                else {
-                    resultado.sinCambios++;
-                    resultado.detalles.sinCambios.push(usuarioConFecha);
-                }
-            });
-            resultado.totalCambios = resultado.nuevos + resultado.actualizados;
-            return resultado;
-        }
-        sincronizarJson() {
-            return __awaiter(this, void 0, void 0, function* () {
                 try {
-                    const respuesta = yield fetch("usuarios.json?" + Date.now());
-                    const datosNuevos = yield respuesta.json();
-                    const resultado = this.procesarDatosApilados(datosNuevos);
-                    if (resultado.totalCambios > 0) {
-                        this.actualizarArrayUsuarios();
+                    const respuesta = yield fetch("http://localhost:5075/api/personas");
+                    const datosUsuarios = yield respuesta.json();
+                    this.usuariosMapeados.clear();
+                    for (let index = 0; index < datosUsuarios.length; index++) {
+                        const element = datosUsuarios[index];
+                        const persona = {
+                            id: element.id,
+                            nombre: element.nombre,
+                            aPaterno: element.aPaterno,
+                            aMaterno: element.aMaterno,
+                            telefono: element.telefono,
+                            fecha: new Date(element.fecha),
+                            correo: element.correo,
+                            nameTag: element.nameTag
+                        };
+                        this.usuariosMapeados.set(persona.id, persona);
                     }
+                    this.actualizarArrayUsuarios();
                 }
                 catch (error) {
-                    console.error("Error al sincronizar JSON:", error);
+                    console.error("Error al cargar usuarios:", error);
+                }
+            });
+        }
+        guardarPersonaEnAPI(persona) {
+            return __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const url = persona.id > 0
+                        ? `http://localhost:5075/api/personas/${persona.id}`
+                        : "http://localhost:5075/api/personas";
+                    const method = persona.id > 0 ? "PUT" : "POST";
+                    const respuesta = yield fetch(url, {
+                        method: method,
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            id: persona.id > 0 ? persona.id : 0,
+                            nombre: persona.nombre,
+                            aPaterno: persona.aPaterno,
+                            aMaterno: persona.aMaterno,
+                            telefono: persona.telefono,
+                            fecha: persona.fecha.toISOString().split('T')[0],
+                            enUso: true
+                        })
+                    });
+                    return respuesta.ok;
+                }
+                catch (error) {
+                    console.error("Error al guardar persona:", error);
+                    return false;
                 }
             });
         }
@@ -104,7 +91,7 @@ var pantallaUsuarios;
             this.ventanaPrincipal = d3.select("body")
                 .append("div")
                 .attr("id", "ventana")
-                .style("width", "800px")
+                .style("width", "1100px")
                 .style("height", "700px")
                 .style("overflow", "auto")
                 .style("padding", "10px")
@@ -174,7 +161,7 @@ var pantallaUsuarios;
                 .on("mouseout", function () {
                 d3.select(this).style("background-color", "#007BFF");
             })
-                .on("click", () => this.sincronizarJson());
+                .on("click", () => this.cargarUsuariosDesdeJSON());
             contenedorBotones.append("button")
                 .text("Agregar Persona")
                 .style("padding", "10px 16px")
@@ -213,7 +200,7 @@ var pantallaUsuarios;
                 .style("overflow", "hidden");
             const encabezado = this.contenedorTabla.append("div")
                 .style("display", "grid")
-                .style("grid-template-columns", "90px repeat(5, 1fr)")
+                .style("grid-template-columns", "90px repeat(7, 1fr)")
                 .style("border-bottom", "10px solid #f0f0f0")
                 .style("padding", "10px")
                 .style("color", "#fff")
@@ -252,6 +239,24 @@ var pantallaUsuarios;
                 .style("cursor", "pointer")
                 .text("Apellido Materno")
                 .on("click", () => this.actualizarArrayUsuarios(3));
+            encabezado.append("div")
+                .attr("id", "columna-email")
+                .attr("class", "titulo-columna")
+                .style("text-align", "center")
+                .style("font-weight", "bold")
+                .style("user-select", "none")
+                .style("cursor", "pointer")
+                .text("Email")
+                .on("click", () => this.actualizarArrayUsuarios(3));
+            encabezado.append("div")
+                .attr("id", "columna-direccion")
+                .attr("class", "titulo-columna")
+                .style("text-align", "center")
+                .style("font-weight", "bold")
+                .style("user-select", "none")
+                .style("cursor", "pointer")
+                .text("Usuario")
+                .on("click", () => this.actualizarArrayUsuarios(4));
             encabezado.append("div")
                 .attr("id", "columna-telefono")
                 .attr("class", "titulo-columna")
@@ -672,7 +677,7 @@ var pantallaUsuarios;
                 const filaEnter = enter.append("div")
                     .attr("class", "fila")
                     .style("display", "grid")
-                    .style("grid-template-columns", "90px repeat(5, 1fr)")
+                    .style("grid-template-columns", "90px repeat(7, 1fr)")
                     .style("border-bottom", "1px solid #ccc")
                     .style("padding", "10px")
                     .style("opacity", "0")
@@ -735,6 +740,28 @@ var pantallaUsuarios;
                     .style("justify-content", "center")
                     .text(d => String(d.aMaterno));
                 filaEnter.append("div")
+                    .attr("id", "txtCorreo")
+                    .attr("class", "celda")
+                    .style("text-align", "center")
+                    .style("padding", "5px")
+                    .style("border-left", "1px solid #ccc")
+                    .style("display", "flex")
+                    .style("align-items", "center")
+                    .style("justify-content", "center")
+                    .style("word-break", "break-all")
+                    .style("line-height", "1.2")
+                    .text(d => String(d.correo));
+                filaEnter.append("div")
+                    .attr("id", "txtUserName")
+                    .attr("class", "celda")
+                    .style("text-align", "center")
+                    .style("padding", "5px")
+                    .style("border-left", "1px solid #ccc")
+                    .style("display", "flex")
+                    .style("align-items", "center")
+                    .style("justify-content", "center")
+                    .text(d => String(d.nameTag));
+                filaEnter.append("div")
                     .attr("id", "txtTelefono")
                     .attr("class", "celda")
                     .style("text-align", "center")
@@ -759,12 +786,11 @@ var pantallaUsuarios;
                 update.select("#txtNombre").text(d => String(d.nombre));
                 update.select("#txtAPaterno").text(d => String(d.aPaterno));
                 update.select("#txtAMaterno").text(d => String(d.aMaterno));
+                update.select("#txtCorreo").text(d => String(d.correo));
+                update.select("#txtUserName").text(d => String(d.nameTag));
                 update.select("#txtTelefono").text(d => String(d.telefono));
                 update.select("#txtFecha").text(d => String(this.formatTime(d.fecha)));
                 update.style("background-color", (d, i) => {
-                    if (d.eModificado) {
-                        return "#fff3cd";
-                    }
                     return i % 2 === 0 ? "#f0f0f0" : "#ffffff";
                 });
                 update.transition()
@@ -779,34 +805,33 @@ var pantallaUsuarios;
             });
         }
         GuardarFormulario() {
-            const nombre = this.txtNombre.property("value");
-            const aPaterno = this.txtAPaterno.property("value");
-            const aMaterno = this.txtAMaterno.property("value");
-            const telefono = parseInt(this.txtTelefono.property("value"));
-            const fecha = new Date(this.txtFecha.property("value"));
-            if (this._UsuarioEdita) {
-                let _usuarioE = this.usuariosMapeados.get(this._UsuarioEdita.id);
-                _usuarioE.nombre = nombre;
-                _usuarioE.aPaterno = aPaterno;
-                _usuarioE.aMaterno = aMaterno;
-                _usuarioE.telefono = telefono;
-                _usuarioE.fecha = fecha;
-                _usuarioE.eModificado = true;
-            }
-            else {
-                let _usuario = {
-                    id: this.usuariosMapeados.size + 1,
+            return __awaiter(this, void 0, void 0, function* () {
+                const nombre = this.txtNombre.property("value");
+                const aPaterno = this.txtAPaterno.property("value");
+                const aMaterno = this.txtAMaterno.property("value");
+                const telefono = parseInt(this.txtTelefono.property("value"));
+                const fecha = new Date(this.txtFecha.property("value"));
+                const correo = this.txtCorreo.property("value");
+                const nameTag = this.txtUserName.property("value");
+                const persona = {
+                    id: this._UsuarioEdita ? this._UsuarioEdita.id : 0,
                     nombre,
                     aPaterno,
                     aMaterno,
                     telefono,
                     fecha,
-                    eModificado: false
+                    correo,
+                    nameTag
                 };
-                this.usuariosMapeados.set(_usuario.id, _usuario);
-            }
-            this.actualizarArrayUsuarios();
-            this.CerrarFormulario();
+                const exito = yield this.guardarPersonaEnAPI(persona);
+                if (exito) {
+                    yield this.cargarUsuariosDesdeJSON();
+                    this.CerrarFormulario();
+                }
+                else {
+                    alert("Error al guardar la persona");
+                }
+            });
         }
         confirmarEliminacion() {
             if (this.usuarioAEliminar) {
@@ -828,3 +853,4 @@ var pantallaUsuarios;
     }
     pantallaUsuarios_1.pantallaUsuarios = pantallaUsuarios;
 })(pantallaUsuarios || (pantallaUsuarios = {}));
+//# sourceMappingURL=pantallaUsuarios.js.map

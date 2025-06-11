@@ -76,3 +76,4 @@ var figuras;
     }
     figuras_1.figuras = figuras;
 })(figuras || (figuras = {}));
+//# sourceMappingURL=figuras.js.map

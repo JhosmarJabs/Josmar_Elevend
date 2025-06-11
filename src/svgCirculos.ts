@@ -5,6 +5,7 @@ namespace svgCirculos {
         y: number;
         r: number;
         color: string;
+        seleccionado: boolean;
     }
 
     export class svgCirculos {
@@ -14,7 +15,8 @@ namespace svgCirculos {
         private circulos: d3.Selection<SVGCircleElement, unknown, HTMLElement, any>;
 
         private circulosDatos: Map<number, ICirculos> = new Map();
-        
+        private seleccionado: ICirculos | null = null; 
+
         constructor() {
             this.crearPantalla();
             this.agregarBotones();
@@ -83,58 +85,108 @@ namespace svgCirculos {
                 y,
                 r,
                 color: this.generarColorAleatorio(),
+                seleccionado: false
             };
 
             this.circulosDatos.set(id, circulo);
-
             this.renderizarCirculos();
         }
 
         private renderizarCirculos(): void {
             const datosArray = Array.from(this.circulosDatos.values());
-            
+
             const circulos = this.svg.selectAll<SVGCircleElement, ICirculos>("circle")
-                .data(datosArray, (d: any) => d.id);
+                .data(datosArray, (d: ICirculos) => d.id.toString())
+                .join(
+                    enter => {
+                        const enterSelection = enter.append("circle")
+                            .attr("r", d => d.r)
+                            .attr("fill", d => d.color)
+                            .attr("cx", d => d.x)
+                            .attr("cy", d => d.y)
+                            .style("cursor", "pointer")
+                            .style("opacity", 0);
 
-            circulos.enter()
-                .append("circle")
-                .attr("r", d => d.r)
-                .attr("fill", d => d.color)
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y)
-                .style("cursor", "pointer")
-                .call(
-                    d3.drag<SVGCircleElement, ICirculos>()
-                        .on("start", function (event, d) {
-                            d3.select(this).attr("stroke", "#000").attr("stroke-width", 4);
-                        })
-                        .on("drag", function (event, d) {
-                            const min = d.r;
-                            const maxX = 800 - min;
-                            const maxY = 600 - min;
+                        enterSelection.call(
+                            d3.drag<SVGCircleElement, ICirculos>()
+                                .on("start", function (event, d) {
+                                    d3.select(this).attr("stroke", "#000").attr("stroke-width", 4);
+                                })
+                                .on("drag", function (event, d) {
+                                    const min = d.r;
+                                    const maxX = 800 - min;
+                                    const maxY = 600 - min;
 
-                            d.x = Math.max(min, Math.min(maxX, event.x));
-                            d.y = Math.max(min, Math.min(maxY, event.y));
+                                    d.x = Math.max(min, Math.min(maxX, event.x));
+                                    d.y = Math.max(min, Math.min(maxY, event.y));
 
-                            d3.select(this)
-                                .attr("cx", d.x)
-                                .attr("cy", d.y);
-                        })
-                        .on("end", function (event, d) {
-                            if (d3.select(this).attr("class") !== "eliminar") {
-                                d3.select(this).attr("stroke", "none");
+                                    d3.select(this)
+                                        .attr("cx", d.x)
+                                        .attr("cy", d.y);
+                                })
+                                .on("end", function (event, d) {
+                                    const elemento = d3.select(this);
+                                    if (!d.seleccionado) {
+                                        elemento.attr("stroke", "none").attr("stroke-width", null);
+                                    }
+                                })
+                        );
+
+                        enterSelection.on("click", (event, d) => {
+                            if (d.seleccionado) {
+                                d.seleccionado = false;
+                                this.seleccionado = null;
+                            } else {
+                                
+                                if (this.seleccionado) {
+                                    this.seleccionado.seleccionado 
+                                    = false;
+                                }
+                                
+                                d.seleccionado = true;
+                                this.seleccionado = d;
                             }
-                        })
-                )
+                            
+                            this.actualizarEstadoSeleccion();
+                        });
 
-                .on("click", (event, d) => {
-                    this.circulosDatos.delete(d.id);
-                    
-                    d3.select(event.currentTarget)
-                        .attr("stroke", "#141414")
-                        .attr("class", "eliminar")
-                        .attr("stroke-width", 4);
-                });
+                        return enterSelection
+                            .transition()
+                            .duration(500)
+                            .style("opacity", 1);
+                    },
+
+                    update => {
+                        update.each(function (d) {
+                            d3.select(this)
+                                .attr("stroke", d.seleccionado ? "#000" : "none")
+                                .attr("stroke-width", d.seleccionado ? 4 : null);
+                        });
+
+                        return update
+                            .transition()
+                            .duration(300)
+                            .attr("cx", d => d.x)                      
+                            .attr("cy", d => d.y)
+                            .attr("r", d => d.r)
+                            .attr("fill", d => d.color);
+                    },
+
+                    exit => {
+                        return exit
+                            .transition()
+                            .duration(300)
+                            .style("opacity", 0)
+                            .attr("r", 0)
+                            .remove();
+                    }
+                );
+        }
+
+        private actualizarEstadoSeleccion(): void {
+            this.svg.selectAll<SVGCircleElement, ICirculos>("circle")
+                .attr("stroke", d => d.seleccionado ? "#000" : "none")
+                .attr("stroke-width", d => d.seleccionado ? 4 : null);
         }
 
         private agregarBotones(): void {
@@ -151,11 +203,16 @@ namespace svgCirculos {
                 .text("Eliminar Círculo")
                 .style("margin", "0 10px")
                 .on("click", () => {
-                    d3.selectAll(".eliminar").each((d: any) => {
-                        this.circulosDatos.delete(d.id);
-                    });
-                    d3.selectAll(".eliminar").remove();
+                    this.eliminarCirculo();
+                    this.renderizarCirculos();
                 });
+        }
+
+        private eliminarCirculo(): void {
+            if (this.seleccionado) {
+                this.circulosDatos.delete(this.seleccionado.id);
+                this.seleccionado = null; 
+            }
         }
     }
 }

@@ -37,3 +37,4 @@ var app;
     app.main = main;
 })(app || (app = {}));
 var appMain = new app.main();
+//# sourceMappingURL=app.js.map

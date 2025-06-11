@@ -5,7 +5,8 @@
     "aPaterno": "Pérez",
     "aMaterno": "Gómez",
     "telefono": 7894561230,
-    "fecha": "2024-06-01"
+    "fecha": "2024-06-01",
+    "enUso": true
   },
   {
     "id": 2,
@@ -13,7 +14,8 @@
     "aPaterno": "López",
     "aMaterno": "Hernández",
     "telefono": 4751234567,
-    "fecha": "2024-06-01"
+    "fecha": "2024-06-01",
+    "enUso": true
   },
   {
     "id": 3,
@@ -21,7 +23,8 @@
     "aPaterno": "García",
     "aMaterno": "Martínez",
     "telefono": 1234567890,
-    "fecha": "2024-06-02"
+    "fecha": "2024-06-02",
+    "enUso": true
   },
   {
     "id": 4,
@@ -29,7 +32,8 @@
     "aPaterno": "Sánchez",
     "aMaterno": "Ramírez",
     "telefono": 7789456123,
-    "fecha": "2024-06-02"
+    "fecha": "2024-06-02",
+    "enUso": true
   },
   {
     "id": 5,
@@ -37,7 +41,8 @@
     "aPaterno": "Torres",
     "aMaterno": "Ruiz",
     "telefono": 8124567891,
-    "fecha": "2024-06-03"
+    "fecha": "2024-06-03",
+    "enUso": true
   },
   {
     "id": 6,
@@ -45,7 +50,8 @@
     "aPaterno": "Morales",
     "aMaterno": "Cruz",
     "telefono": 8174569358,
-    "fecha": "2024-06-01"
+    "fecha": "2024-06-01",
+    "enUso": true
   },
   {
     "id": 7,
@@ -53,7 +59,8 @@
     "aPaterno": "Reyes",
     "aMaterno": "Vásquez",
     "telefono": 4831597532,
-    "fecha": "2024-06-03"
+    "fecha": "2024-06-03",
+    "enUso": true
   },
   {
     "id": 8,
@@ -61,7 +68,8 @@
     "aPaterno": "López",
     "aMaterno": "Salazar",
     "telefono": 7756983245,
-    "fecha": "2024-06-01"
+    "fecha": "2024-06-01",
+    "enUso": true
   },
   {
     "id": 9,
@@ -69,15 +77,17 @@
     "aPaterno": "Mendoza",
     "aMaterno": "Ramírez",
     "telefono": 8175398743,
-    "fecha": "2024-06-02"
+    "fecha": "2024-06-02",
+    "enUso": true
   },
   {
     "id": 10,
-    "nombre": "Isabel",
+    "nombre": "Issabel",
     "aPaterno": "Pérez",
     "aMaterno": "Gómez",
     "telefono": 7894561235,
-    "fecha": "2024-06-03"
+    "fecha": "2024-06-03",
+    "enUso": true
   }
 ]
   
