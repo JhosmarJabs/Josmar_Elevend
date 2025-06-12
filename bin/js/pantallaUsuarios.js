@@ -840,6 +840,7 @@ var pantallaUsuarios;
             }
         }
         eliminarUsuarioConfirmado(usuario) {
+            this.peticionBDEliminar(usuario.id);
             this.usuariosMapeados.delete(usuario.id);
             this.actualizarArrayUsuarios();
         }
@@ -849,6 +850,19 @@ var pantallaUsuarios;
             this.txtAMaterno.property("value", "");
             this.txtTelefono.property("value", "");
             this.txtFecha.property("value", "");
+        }
+        peticionBDEliminar(id) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const url = `http://localhost:5075/api/personas/delete/${id}`;
+                const method = "PUT";
+                const response = yield fetch(url, {
+                    method: method,
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(id)
+                });
+            });
         }
     }
     pantallaUsuarios_1.pantallaUsuarios = pantallaUsuarios;

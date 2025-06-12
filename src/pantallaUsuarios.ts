@@ -855,7 +855,7 @@ namespace pantallaUsuarios {
                             .style("align-items", "center")
                             .style("justify-content", "center")
                             .style("word-break", "break-all")
-                            .style("line-height", "1.2")     
+                            .style("line-height", "1.2")
                             .text(d => String(d.correo));
 
                         filaEnter.append("div")
@@ -959,6 +959,7 @@ namespace pantallaUsuarios {
         }
 
         private eliminarUsuarioConfirmado(usuario: IPersona): void {
+            this.peticionBDEliminar(usuario.id)
             this.usuariosMapeados.delete(usuario.id);
             this.actualizarArrayUsuarios();
         }
@@ -969,6 +970,19 @@ namespace pantallaUsuarios {
             this.txtAMaterno.property("value", "");
             this.txtTelefono.property("value", "");
             this.txtFecha.property("value", "");
+        }
+
+        private async peticionBDEliminar(id: number): Promise<void> {
+            const url = `http://localhost:5075/api/personas/delete/${id}`;
+            const method = "PUT";
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(id)
+            });
         }
     }
 }
