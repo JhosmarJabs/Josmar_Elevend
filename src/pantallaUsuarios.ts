@@ -6,22 +6,36 @@ namespace pantallaUsuarios {
         Telefono = 4,
         Fecha = 5,
     }
+    
     export interface IClave {
         id: number;
         nombre: string;
+    }
+
+    export interface IEmpresa {
+        id: number;
+        nombre: string;
+        ubicacion: string;
+        fechaRegistro: string;
+        fechaModificacion: string;
+        enUso: boolean;
     }
 
     export interface IPersona extends IClave {
         aPaterno: string;
         aMaterno: string;
         telefono: number;
-        fecha: Date;
+        fechaNacimiento: Date;
         correo: string;
         nameTag: string;
+        empresa: number
     }
 
     export class pantallaUsuarios {
+        private urlAPI: string = "http://localhost:5075/api/personas";
+        private urlAPIEmpresas: string = "http://localhost:5075/api/empresas";
         private usuariosMapeados: Map<number, IPersona> = new Map();
+        private empresas: IEmpresa[] = [];
         private _UsuarioEdita: IPersona | null;
         private usuarioAEliminar: IPersona | null = null;
 
@@ -35,9 +49,10 @@ namespace pantallaUsuarios {
         private txtAPaterno: d3.Selection<HTMLInputElement, any, any, any>;
         private txtAMaterno: d3.Selection<HTMLInputElement, any, any, any>;
         private txtTelefono: d3.Selection<HTMLInputElement, any, any, any>;
-        private txtFecha: d3.Selection<HTMLInputElement, any, any, any>;
+        private txtFechaNacimiento: d3.Selection<HTMLInputElement, any, any, any>;
         private txtCorreo: d3.Selection<HTMLInputElement, any, any, any>;
         private txtUserName: d3.Selection<HTMLInputElement, any, any, any>;
+        private selectEmpresa: d3.Selection<HTMLSelectElement, any, any, any>;
 
         private CapaBloqueo: d3.Selection<HTMLDivElement, any, any, any>;
 
@@ -56,7 +71,7 @@ namespace pantallaUsuarios {
 
         private async cargarUsuariosDesdeJSON(): Promise<void> {
             try {
-                const respuesta = await fetch("http://localhost:5075/api/personas");
+                const respuesta = await fetch(`${this.urlAPI}`);
                 const datosUsuarios: Array<any> = await respuesta.json();
 
                 this.usuariosMapeados.clear();
@@ -69,9 +84,10 @@ namespace pantallaUsuarios {
                         aPaterno: element.aPaterno,
                         aMaterno: element.aMaterno,
                         telefono: element.telefono,
-                        fecha: new Date(element.fecha),
+                        fechaNacimiento: new Date(element.fechaNacimiento),
                         correo: element.correo,
-                        nameTag: element.nameTag
+                        nameTag: element.nameTag,
+                        empresa: element.empresaId
                     };
 
                     this.usuariosMapeados.set(persona.id, persona);
@@ -82,11 +98,64 @@ namespace pantallaUsuarios {
                 console.error("Error al cargar usuarios:", error);
             }
         }
+
+        private async consultarEmpresas(): Promise<void> {
+            try {
+                const response = await fetch(this.urlAPIEmpresas);
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const empresas: IEmpresa[] = await response.json();
+                this.empresas = empresas;
+                
+                this.llenarSelectEmpresas();
+                
+            } catch (error) {
+                console.error("Error al consultar empresas:", error);
+                this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
+            }
+        }
+
+        private llenarSelectEmpresas(): void {
+            this.selectEmpresa.selectAll("option:not(:first-child)").remove();
+            
+            this.selectEmpresa.selectAll("option.empresa-option")
+                .data(this.empresas)
+                .enter()
+                .append("option")
+                .attr("class", "empresa-option")
+                .attr("value", d => d.id.toString())
+                .text(d => d.nombre);
+        }
+
+        private mostrarErrorEmpresa(mensaje: string): void {
+            this.selectEmpresa.append("option")
+                .attr("value", "")
+                .attr("disabled", true)
+                .text(mensaje)
+                .style("color", "red");
+        }
+
+        private obtenerEmpresaSeleccionada(): number | null {
+            const valorSeleccionado = this.selectEmpresa.property("value");
+            return valorSeleccionado ? parseInt(valorSeleccionado) : null;
+        }
+
+        private establecerEmpresa(empresaId: number): void {
+            this.selectEmpresa.property("value", empresaId.toString());
+        }
+
+        private limpiarSelectEmpresa(): void {
+            this.selectEmpresa.property("value", "");
+        }
+
         private async guardarPersonaEnAPI(persona: IPersona): Promise<boolean> {
             try {
                 const url = persona.id > 0
-                    ? `http://localhost:5075/api/personas/${persona.id}`
-                    : "http://localhost:5075/api/personas";
+                    ? `${this.urlAPI}/${persona.id}`
+                    : this.urlAPI;
 
                 const method = persona.id > 0 ? "PUT" : "POST";
 
@@ -101,7 +170,10 @@ namespace pantallaUsuarios {
                         aPaterno: persona.aPaterno,
                         aMaterno: persona.aMaterno,
                         telefono: persona.telefono,
-                        fecha: persona.fecha.toISOString().split('T')[0],
+                        fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
+                        correo: persona.correo,
+                        nameTag: persona.nameTag,
+                        empresaId: persona.empresa,
                         enUso: true
                     })
                 });
@@ -384,6 +456,46 @@ namespace pantallaUsuarios {
                 .attr("value", "")
                 .style("border-radius", "4px");
 
+            const grupoCorreo = this.formularioPersona.append("div")
+                .style("margin-bottom", "15px");
+
+            grupoCorreo.append("label")
+                .attr("for", "input-correo")
+                .text("Correo:")
+                .style("display", "block")
+                .style("font-weight", "bold")
+                .style("margin-bottom", "5px");
+
+            this.txtCorreo = grupoCorreo.append("input")
+                .attr("type", "email")
+                .attr("id", "input-correo")
+                .attr("placeholder", "Ingrese el correo electrónico")
+                .style("width", "98%")
+                .style("padding", "8px")
+                .style("border", "1px solid #ccc")
+                .attr("value", "")
+                .style("border-radius", "4px");
+
+            const grupoUserName = this.formularioPersona.append("div")
+                .style("margin-bottom", "15px");
+
+            grupoUserName.append("label")
+                .attr("for", "input-username")
+                .text("Nombre de Usuario:")
+                .style("display", "block")
+                .style("font-weight", "bold")
+                .style("margin-bottom", "5px");
+
+            this.txtUserName = grupoUserName.append("input")
+                .attr("type", "text")
+                .attr("id", "input-username")
+                .attr("placeholder", "Ingrese el nombre de usuario")
+                .style("width", "98%")
+                .style("padding", "8px")
+                .style("border", "1px solid #ccc")
+                .attr("value", "")
+                .style("border-radius", "4px");
+
             const grupoTelefono = this.formularioPersona.append("div")
                 .style("margin-bottom", "15px");
 
@@ -410,12 +522,12 @@ namespace pantallaUsuarios {
 
             grupoFecha.append("label")
                 .attr("for", "input-fecha")
-                .text("Fecha:")
+                .text("Fecha de Nacimiento:")
                 .style("display", "block")
                 .style("font-weight", "bold")
                 .style("margin-bottom", "5px");
 
-            this.txtFecha = grupoFecha.append("input")
+            this.txtFechaNacimiento = grupoFecha.append("input")
                 .attr("type", "date")
                 .attr("id", "input-fecha")
                 .style("width", "98%")
@@ -424,6 +536,34 @@ namespace pantallaUsuarios {
                 .style("border", "1px solid #ccc")
                 .attr("value", "")
                 .style("border-radius", "4px");
+
+            const grupoEmpresa = this.formularioPersona.append("div")
+                .style("margin-bottom", "15px");
+
+            grupoEmpresa.append("label")
+                .attr("for", "select-empresa")
+                .text("Empresa:")
+                .style("display", "block")
+                .style("font-weight", "bold")
+                .style("margin-bottom", "5px");
+
+            this.selectEmpresa = grupoEmpresa.append("select")
+                .attr("id", "select-empresa")
+                .attr("required", true)
+                .style("width", "100%")
+                .style("padding", "8px")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "4px")
+                .style("background-color", "#fff")
+                .style("font-size", "14px");
+
+            this.selectEmpresa.append("option")
+                .attr("value", "")
+                .attr("selected", true)
+                .attr("disabled", true)
+                .text("Seleccione una empresa...");
+
+            this.consultarEmpresas();
 
             this.formularioPersona.append("button")
                 .text("Guardar")
@@ -631,8 +771,11 @@ namespace pantallaUsuarios {
                 this.txtNombre.property("value", _Usuario.nombre);
                 this.txtAPaterno.property("value", _Usuario.aPaterno);
                 this.txtAMaterno.property("value", _Usuario.aMaterno);
+                this.txtCorreo.property("value", _Usuario.correo);
+                this.txtUserName.property("value", _Usuario.nameTag);
                 this.txtTelefono.property("value", _Usuario.telefono);
-                this.txtFecha.property("value", _Usuario.fecha.toISOString().split("T")[0]);
+                this.txtFechaNacimiento.property("value", _Usuario.fechaNacimiento.toISOString().split("T")[0]);
+                this.establecerEmpresa(_Usuario.empresa);
             }
         }
 
@@ -734,11 +877,11 @@ namespace pantallaUsuarios {
                         break;
 
                     case eColumna.Fecha:
-                        indicador = "fecha";
+                        indicador = "fechaNacimiento";
                         if (direccion === 1) {
-                            usuariosVisibles.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+                            usuariosVisibles.sort((a, b) => a.fechaNacimiento.getTime() - b.fechaNacimiento.getTime());
                         } else if (direccion === 2) {
-                            usuariosVisibles.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+                            usuariosVisibles.sort((a, b) => b.fechaNacimiento.getTime() - a.fechaNacimiento.getTime());
                         }
                         break;
                 }
@@ -889,7 +1032,7 @@ namespace pantallaUsuarios {
                             .style("display", "flex")
                             .style("align-items", "center")
                             .style("justify-content", "center")
-                            .text(d => String(this.formatTime(d.fecha)));
+                            .text(d => String(this.formatTime(d.fechaNacimiento)));
 
                         return filaEnter.transition().duration(300).style("opacity", "1");
                     },
@@ -901,7 +1044,7 @@ namespace pantallaUsuarios {
                         update.select("#txtCorreo").text(d => String(d.correo));
                         update.select("#txtUserName").text(d => String(d.nameTag));
                         update.select("#txtTelefono").text(d => String(d.telefono));
-                        update.select("#txtFecha").text(d => String(this.formatTime(d.fecha)));
+                        update.select("#txtFecha").text(d => String(this.formatTime(d.fechaNacimiento)));
 
                         update.style("background-color", (d, i) => {
                             return i % 2 === 0 ? "#f0f0f0" : "#ffffff";
@@ -921,14 +1064,21 @@ namespace pantallaUsuarios {
                     }
                 );
         }
+
         private async GuardarFormulario(): Promise<void> {
             const nombre = this.txtNombre.property("value");
             const aPaterno = this.txtAPaterno.property("value");
             const aMaterno = this.txtAMaterno.property("value");
             const telefono = parseInt(this.txtTelefono.property("value"));
-            const fecha = new Date(this.txtFecha.property("value"));
+            const fechaNacimiento = new Date(this.txtFechaNacimiento.property("value"));
             const correo = this.txtCorreo.property("value");
             const nameTag = this.txtUserName.property("value");
+            const empresa = this.obtenerEmpresaSeleccionada();
+
+            if (!empresa) {
+                alert("Por favor seleccione una empresa");
+                return;
+            }
 
             const persona: IPersona = {
                 id: this._UsuarioEdita ? this._UsuarioEdita.id : 0,
@@ -936,9 +1086,10 @@ namespace pantallaUsuarios {
                 aPaterno,
                 aMaterno,
                 telefono,
-                fecha,
+                fechaNacimiento,
                 correo,
-                nameTag
+                nameTag,
+                empresa
             };
 
             const exito = await this.guardarPersonaEnAPI(persona);
@@ -968,12 +1119,15 @@ namespace pantallaUsuarios {
             this.txtNombre.property("value", "");
             this.txtAPaterno.property("value", "");
             this.txtAMaterno.property("value", "");
+            this.txtCorreo.property("value", "");
+            this.txtUserName.property("value", "");
             this.txtTelefono.property("value", "");
-            this.txtFecha.property("value", "");
+            this.txtFechaNacimiento.property("value", "");
+            this.limpiarSelectEmpresa();
         }
 
         private async peticionBDEliminar(id: number): Promise<void> {
-            const url = `http://localhost:5075/api/personas/delete/${id}`;
+            const url = `${this.urlAPI}/delete/${id}`;
             const method = "PUT";
 
             const response = await fetch(url, {
@@ -986,3 +1140,4 @@ namespace pantallaUsuarios {
         }
     }
 }
+//

@@ -19,7 +19,10 @@ var pantallaUsuarios;
     })(eColumna = pantallaUsuarios_1.eColumna || (pantallaUsuarios_1.eColumna = {}));
     class pantallaUsuarios {
         constructor() {
+            this.urlAPI = "http://localhost:5075/api/personas";
+            this.urlAPIEmpresas = "http://localhost:5075/api/empresas";
             this.usuariosMapeados = new Map();
+            this.empresas = [];
             this.usuarioAEliminar = null;
             this.mostrarVentanaPrincipal = false;
             this.ventanaEliminacionCreada = false;
@@ -33,7 +36,7 @@ var pantallaUsuarios;
         cargarUsuariosDesdeJSON() {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
-                    const respuesta = yield fetch("http://localhost:5075/api/personas");
+                    const respuesta = yield fetch(`${this.urlAPI}`);
                     const datosUsuarios = yield respuesta.json();
                     this.usuariosMapeados.clear();
                     for (let index = 0; index < datosUsuarios.length; index++) {
@@ -44,9 +47,10 @@ var pantallaUsuarios;
                             aPaterno: element.aPaterno,
                             aMaterno: element.aMaterno,
                             telefono: element.telefono,
-                            fecha: new Date(element.fecha),
+                            fechaNacimiento: new Date(element.fechaNacimiento),
                             correo: element.correo,
-                            nameTag: element.nameTag
+                            nameTag: element.nameTag,
+                            empresa: element.empresaId
                         };
                         this.usuariosMapeados.set(persona.id, persona);
                     }
@@ -57,12 +61,56 @@ var pantallaUsuarios;
                 }
             });
         }
+        consultarEmpresas() {
+            return __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const response = yield fetch(this.urlAPIEmpresas);
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    const empresas = yield response.json();
+                    this.empresas = empresas;
+                    this.llenarSelectEmpresas();
+                }
+                catch (error) {
+                    console.error("Error al consultar empresas:", error);
+                    this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
+                }
+            });
+        }
+        llenarSelectEmpresas() {
+            this.selectEmpresa.selectAll("option:not(:first-child)").remove();
+            this.selectEmpresa.selectAll("option.empresa-option")
+                .data(this.empresas)
+                .enter()
+                .append("option")
+                .attr("class", "empresa-option")
+                .attr("value", d => d.id.toString())
+                .text(d => d.nombre);
+        }
+        mostrarErrorEmpresa(mensaje) {
+            this.selectEmpresa.append("option")
+                .attr("value", "")
+                .attr("disabled", true)
+                .text(mensaje)
+                .style("color", "red");
+        }
+        obtenerEmpresaSeleccionada() {
+            const valorSeleccionado = this.selectEmpresa.property("value");
+            return valorSeleccionado ? parseInt(valorSeleccionado) : null;
+        }
+        establecerEmpresa(empresaId) {
+            this.selectEmpresa.property("value", empresaId.toString());
+        }
+        limpiarSelectEmpresa() {
+            this.selectEmpresa.property("value", "");
+        }
         guardarPersonaEnAPI(persona) {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
                     const url = persona.id > 0
-                        ? `http://localhost:5075/api/personas/${persona.id}`
-                        : "http://localhost:5075/api/personas";
+                        ? `${this.urlAPI}/${persona.id}`
+                        : this.urlAPI;
                     const method = persona.id > 0 ? "PUT" : "POST";
                     const respuesta = yield fetch(url, {
                         method: method,
@@ -75,7 +123,10 @@ var pantallaUsuarios;
                             aPaterno: persona.aPaterno,
                             aMaterno: persona.aMaterno,
                             telefono: persona.telefono,
-                            fecha: persona.fecha.toISOString().split('T')[0],
+                            fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
+                            correo: persona.correo,
+                            nameTag: persona.nameTag,
+                            empresaId: persona.empresa,
                             enUso: true
                         })
                     });
@@ -331,6 +382,40 @@ var pantallaUsuarios;
                 .style("border", "1px solid #ccc")
                 .attr("value", "")
                 .style("border-radius", "4px");
+            const grupoCorreo = this.formularioPersona.append("div")
+                .style("margin-bottom", "15px");
+            grupoCorreo.append("label")
+                .attr("for", "input-correo")
+                .text("Correo:")
+                .style("display", "block")
+                .style("font-weight", "bold")
+                .style("margin-bottom", "5px");
+            this.txtCorreo = grupoCorreo.append("input")
+                .attr("type", "email")
+                .attr("id", "input-correo")
+                .attr("placeholder", "Ingrese el correo electrónico")
+                .style("width", "98%")
+                .style("padding", "8px")
+                .style("border", "1px solid #ccc")
+                .attr("value", "")
+                .style("border-radius", "4px");
+            const grupoUserName = this.formularioPersona.append("div")
+                .style("margin-bottom", "15px");
+            grupoUserName.append("label")
+                .attr("for", "input-username")
+                .text("Nombre de Usuario:")
+                .style("display", "block")
+                .style("font-weight", "bold")
+                .style("margin-bottom", "5px");
+            this.txtUserName = grupoUserName.append("input")
+                .attr("type", "text")
+                .attr("id", "input-username")
+                .attr("placeholder", "Ingrese el nombre de usuario")
+                .style("width", "98%")
+                .style("padding", "8px")
+                .style("border", "1px solid #ccc")
+                .attr("value", "")
+                .style("border-radius", "4px");
             const grupoTelefono = this.formularioPersona.append("div")
                 .style("margin-bottom", "15px");
             grupoTelefono.append("label")
@@ -353,11 +438,11 @@ var pantallaUsuarios;
                 .style("margin-bottom", "20px");
             grupoFecha.append("label")
                 .attr("for", "input-fecha")
-                .text("Fecha:")
+                .text("Fecha de Nacimiento:")
                 .style("display", "block")
                 .style("font-weight", "bold")
                 .style("margin-bottom", "5px");
-            this.txtFecha = grupoFecha.append("input")
+            this.txtFechaNacimiento = grupoFecha.append("input")
                 .attr("type", "date")
                 .attr("id", "input-fecha")
                 .style("width", "98%")
@@ -366,6 +451,29 @@ var pantallaUsuarios;
                 .style("border", "1px solid #ccc")
                 .attr("value", "")
                 .style("border-radius", "4px");
+            const grupoEmpresa = this.formularioPersona.append("div")
+                .style("margin-bottom", "15px");
+            grupoEmpresa.append("label")
+                .attr("for", "select-empresa")
+                .text("Empresa:")
+                .style("display", "block")
+                .style("font-weight", "bold")
+                .style("margin-bottom", "5px");
+            this.selectEmpresa = grupoEmpresa.append("select")
+                .attr("id", "select-empresa")
+                .attr("required", true)
+                .style("width", "100%")
+                .style("padding", "8px")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "4px")
+                .style("background-color", "#fff")
+                .style("font-size", "14px");
+            this.selectEmpresa.append("option")
+                .attr("value", "")
+                .attr("selected", true)
+                .attr("disabled", true)
+                .text("Seleccione una empresa...");
+            this.consultarEmpresas();
             this.formularioPersona.append("button")
                 .text("Guardar")
                 .style("padding", "10px 20px")
@@ -551,8 +659,11 @@ var pantallaUsuarios;
                 this.txtNombre.property("value", _Usuario.nombre);
                 this.txtAPaterno.property("value", _Usuario.aPaterno);
                 this.txtAMaterno.property("value", _Usuario.aMaterno);
+                this.txtCorreo.property("value", _Usuario.correo);
+                this.txtUserName.property("value", _Usuario.nameTag);
                 this.txtTelefono.property("value", _Usuario.telefono);
-                this.txtFecha.property("value", _Usuario.fecha.toISOString().split("T")[0]);
+                this.txtFechaNacimiento.property("value", _Usuario.fechaNacimiento.toISOString().split("T")[0]);
+                this.establecerEmpresa(_Usuario.empresa);
             }
         }
         abrirVentanaEliminacion(usuario) {
@@ -639,12 +750,12 @@ var pantallaUsuarios;
                         }
                         break;
                     case eColumna.Fecha:
-                        indicador = "fecha";
+                        indicador = "fechaNacimiento";
                         if (direccion === 1) {
-                            usuariosVisibles.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+                            usuariosVisibles.sort((a, b) => a.fechaNacimiento.getTime() - b.fechaNacimiento.getTime());
                         }
                         else if (direccion === 2) {
-                            usuariosVisibles.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+                            usuariosVisibles.sort((a, b) => b.fechaNacimiento.getTime() - a.fechaNacimiento.getTime());
                         }
                         break;
                 }
@@ -780,7 +891,7 @@ var pantallaUsuarios;
                     .style("display", "flex")
                     .style("align-items", "center")
                     .style("justify-content", "center")
-                    .text(d => String(this.formatTime(d.fecha)));
+                    .text(d => String(this.formatTime(d.fechaNacimiento)));
                 return filaEnter.transition().duration(300).style("opacity", "1");
             }, update => {
                 update.select("#txtNombre").text(d => String(d.nombre));
@@ -789,7 +900,7 @@ var pantallaUsuarios;
                 update.select("#txtCorreo").text(d => String(d.correo));
                 update.select("#txtUserName").text(d => String(d.nameTag));
                 update.select("#txtTelefono").text(d => String(d.telefono));
-                update.select("#txtFecha").text(d => String(this.formatTime(d.fecha)));
+                update.select("#txtFecha").text(d => String(this.formatTime(d.fechaNacimiento)));
                 update.style("background-color", (d, i) => {
                     return i % 2 === 0 ? "#f0f0f0" : "#ffffff";
                 });
@@ -810,18 +921,24 @@ var pantallaUsuarios;
                 const aPaterno = this.txtAPaterno.property("value");
                 const aMaterno = this.txtAMaterno.property("value");
                 const telefono = parseInt(this.txtTelefono.property("value"));
-                const fecha = new Date(this.txtFecha.property("value"));
+                const fechaNacimiento = new Date(this.txtFechaNacimiento.property("value"));
                 const correo = this.txtCorreo.property("value");
                 const nameTag = this.txtUserName.property("value");
+                const empresa = this.obtenerEmpresaSeleccionada();
+                if (!empresa) {
+                    alert("Por favor seleccione una empresa");
+                    return;
+                }
                 const persona = {
                     id: this._UsuarioEdita ? this._UsuarioEdita.id : 0,
                     nombre,
                     aPaterno,
                     aMaterno,
                     telefono,
-                    fecha,
+                    fechaNacimiento,
                     correo,
-                    nameTag
+                    nameTag,
+                    empresa
                 };
                 const exito = yield this.guardarPersonaEnAPI(persona);
                 if (exito) {
@@ -848,12 +965,15 @@ var pantallaUsuarios;
             this.txtNombre.property("value", "");
             this.txtAPaterno.property("value", "");
             this.txtAMaterno.property("value", "");
+            this.txtCorreo.property("value", "");
+            this.txtUserName.property("value", "");
             this.txtTelefono.property("value", "");
-            this.txtFecha.property("value", "");
+            this.txtFechaNacimiento.property("value", "");
+            this.limpiarSelectEmpresa();
         }
         peticionBDEliminar(id) {
             return __awaiter(this, void 0, void 0, function* () {
-                const url = `http://localhost:5075/api/personas/delete/${id}`;
+                const url = `${this.urlAPI}/delete/${id}`;
                 const method = "PUT";
                 const response = yield fetch(url, {
                     method: method,
@@ -867,4 +987,5 @@ var pantallaUsuarios;
     }
     pantallaUsuarios_1.pantallaUsuarios = pantallaUsuarios;
 })(pantallaUsuarios || (pantallaUsuarios = {}));
+//
 //# sourceMappingURL=pantallaUsuarios.js.map
