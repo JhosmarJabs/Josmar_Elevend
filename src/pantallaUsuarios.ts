@@ -6,7 +6,7 @@ namespace pantallaUsuarios {
         Telefono = 4,
         Fecha = 5,
     }
-    
+
     export interface IClave {
         id: number;
         nombre: string;
@@ -32,8 +32,7 @@ namespace pantallaUsuarios {
     }
 
     export class pantallaUsuarios {
-        private urlAPI: string = "http://localhost:5075/api/personas";
-        private urlAPIEmpresas: string = "http://localhost:5075/api/empresas";
+
         private usuariosMapeados: Map<number, IPersona> = new Map();
         private empresas: IEmpresa[] = [];
         private _UsuarioEdita: IPersona | null;
@@ -71,7 +70,14 @@ namespace pantallaUsuarios {
 
         private async cargarUsuariosDesdeJSON(): Promise<void> {
             try {
-                const respuesta = await fetch(`${this.urlAPI}`);
+                const respuesta = await fetch(config.ApiConfig.API_PERSONAS, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
                 const datosUsuarios: Array<any> = await respuesta.json();
 
                 this.usuariosMapeados.clear();
@@ -101,26 +107,31 @@ namespace pantallaUsuarios {
 
         private async consultarEmpresas(): Promise<void> {
             try {
-                const response = await fetch(this.urlAPIEmpresas);
-                
+                const response = await fetch(config.ApiConfig.API_EMPRESAS, {
+                    method: 'POST',  
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})  
+                });
+
                 if (!response.ok) {
                     throw new Error(`Error HTTP: ${response.status}`);
                 }
-                
+
                 const empresas: IEmpresa[] = await response.json();
                 this.empresas = empresas;
-                
+
                 this.llenarSelectEmpresas();
-                
+
             } catch (error) {
                 console.error("Error al consultar empresas:", error);
                 this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
             }
         }
-
         private llenarSelectEmpresas(): void {
             this.selectEmpresa.selectAll("option:not(:first-child)").remove();
-            
+
             this.selectEmpresa.selectAll("option.empresa-option")
                 .data(this.empresas)
                 .enter()
@@ -154,10 +165,10 @@ namespace pantallaUsuarios {
         private async guardarPersonaEnAPI(persona: IPersona): Promise<boolean> {
             try {
                 const url = persona.id > 0
-                    ? `${this.urlAPI}/${persona.id}`
-                    : this.urlAPI;
+                    ? config.ApiConfig.API_UPDATE_PERSONA
+                    : config.ApiConfig.API_CREATE_PERSONA;
 
-                const method = persona.id > 0 ? "PUT" : "POST";
+                const method = "POST";
 
                 const respuesta = await fetch(url, {
                     method: method,
@@ -1127,17 +1138,25 @@ namespace pantallaUsuarios {
         }
 
         private async peticionBDEliminar(id: number): Promise<void> {
-            const url = `${this.urlAPI}/delete/${id}`;
-            const method = "PUT";
+            try {
+                const url = config.ApiConfig.API_DELETE_PERSONA;
 
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(id)
-            });
+                const method = "POST";
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(id)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+            } catch (error) {
+                console.error("Error al eliminar persona:", error);
+            }
         }
     }
 }
-//

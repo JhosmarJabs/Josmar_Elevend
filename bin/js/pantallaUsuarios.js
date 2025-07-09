@@ -19,8 +19,6 @@ var pantallaUsuarios;
     })(eColumna = pantallaUsuarios_1.eColumna || (pantallaUsuarios_1.eColumna = {}));
     class pantallaUsuarios {
         constructor() {
-            this.urlAPI = "http://localhost:5075/api/personas";
-            this.urlAPIEmpresas = "http://localhost:5075/api/empresas";
             this.usuariosMapeados = new Map();
             this.empresas = [];
             this.usuarioAEliminar = null;
@@ -36,7 +34,13 @@ var pantallaUsuarios;
         cargarUsuariosDesdeJSON() {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
-                    const respuesta = yield fetch(`${this.urlAPI}`);
+                    const respuesta = yield fetch(config.ApiConfig.API_PERSONAS, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
                     const datosUsuarios = yield respuesta.json();
                     this.usuariosMapeados.clear();
                     for (let index = 0; index < datosUsuarios.length; index++) {
@@ -64,7 +68,13 @@ var pantallaUsuarios;
         consultarEmpresas() {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
-                    const response = yield fetch(this.urlAPIEmpresas);
+                    const response = yield fetch(config.ApiConfig.API_EMPRESAS, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
                     if (!response.ok) {
                         throw new Error(`Error HTTP: ${response.status}`);
                     }
@@ -109,9 +119,9 @@ var pantallaUsuarios;
             return __awaiter(this, void 0, void 0, function* () {
                 try {
                     const url = persona.id > 0
-                        ? `${this.urlAPI}/${persona.id}`
-                        : this.urlAPI;
-                    const method = persona.id > 0 ? "PUT" : "POST";
+                        ? config.ApiConfig.API_UPDATE_PERSONA
+                        : config.ApiConfig.API_CREATE_PERSONA;
+                    const method = "POST";
                     const respuesta = yield fetch(url, {
                         method: method,
                         headers: {
@@ -973,19 +983,26 @@ var pantallaUsuarios;
         }
         peticionBDEliminar(id) {
             return __awaiter(this, void 0, void 0, function* () {
-                const url = `${this.urlAPI}/delete/${id}`;
-                const method = "PUT";
-                const response = yield fetch(url, {
-                    method: method,
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(id)
-                });
+                try {
+                    const url = config.ApiConfig.API_DELETE_PERSONA;
+                    const method = "POST";
+                    const response = yield fetch(url, {
+                        method: method,
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(id)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                }
+                catch (error) {
+                    console.error("Error al eliminar persona:", error);
+                }
             });
         }
     }
     pantallaUsuarios_1.pantallaUsuarios = pantallaUsuarios;
 })(pantallaUsuarios || (pantallaUsuarios = {}));
-//
 //# sourceMappingURL=pantallaUsuarios.js.map
