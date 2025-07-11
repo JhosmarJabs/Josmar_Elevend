@@ -1,0 +1,8 @@
+node_modules/
+bin/libs/
+obj/
+obj/Debug/
+
+.vs/
+.vscode/
+
