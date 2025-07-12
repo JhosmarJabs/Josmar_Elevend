@@ -1,8 +1,32 @@
-node_modules/
-bin/libs/
+# Archivos compilados de .NET
+bin/
 obj/
-obj/Debug/
+*.dll
+*.exe
+*.pdb
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Librerías externas (se pueden descargar)
+lib/
+!lib/d3.v7.min.js
+
+# Archivos temporales y de configuración local
+temp.js
+*.tmp
+*.temp
+
+# Visual Studio / VS Code
 .vs/
-.vscode/
+*.user
 
+# Archivos de configuración sensibles
+appsettings.Development.json
+*.secrets.json
+
+# Cache de TypeScript
+*.tsbuildinfo

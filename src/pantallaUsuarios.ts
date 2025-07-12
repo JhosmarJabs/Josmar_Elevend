@@ -60,6 +60,8 @@ namespace pantallaUsuarios {
         private ventanaCreada: boolean = false;
         private clickAnterior: { columna: number, direccion: number } = { columna: 0, direccion: 0 };
 
+        private ultimaFechaModificacion: string | null = null;
+
         formatTime = d3.utcFormat("%d %B, %Y");
 
         constructor() {
@@ -70,34 +72,40 @@ namespace pantallaUsuarios {
 
         private async cargarUsuariosDesdeJSON(): Promise<void> {
             try {
-                const respuesta = await fetch(config.ApiConfig.API_PERSONAS, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                });
+                let url = config.ApiConfig.API_PERSONAS;
 
-                const datosUsuarios: Array<any> = await respuesta.json();
-
-                this.usuariosMapeados.clear();
-
-                for (let index = 0; index < datosUsuarios.length; index++) {
-                    const element = datosUsuarios[index];
-                    const persona: IPersona = {
-                        id: element.id,
-                        nombre: element.nombre,
-                        aPaterno: element.aPaterno,
-                        aMaterno: element.aMaterno,
-                        telefono: element.telefono,
-                        fechaNacimiento: new Date(element.fechaNacimiento),
-                        correo: element.correo,
-                        nameTag: element.nameTag,
-                        empresa: element.empresaId
-                    };
-
-                    this.usuariosMapeados.set(persona.id, persona);
+                if (this.ultimaFechaModificacion) {
+                    url += `?fechaModificacion=${encodeURIComponent(this.ultimaFechaModificacion)}`;
                 }
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Datos recibidos:', data);
+
+                        this.usuariosMapeados.clear();
+
+                        for (let index = 0; index < data.length; index++) {
+                            const element = data[index];
+                            const persona: IPersona = {
+                                id: element.id,
+                                nombre: element.nombre,
+                                aPaterno: element.aPaterno,
+                                aMaterno: element.aMaterno,
+                                telefono: element.telefono,
+                                fechaNacimiento: new Date(element.fechaNacimiento),
+                                correo: element.correo,
+                                nameTag: element.nameTag,
+                                empresa: element.empresaId
+                            };
+
+                            this.usuariosMapeados.set(persona.id, persona);
+                        }
+
+                        this.actualizarArrayUsuarios();
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar usuarios:', error);
+                    });
 
                 this.actualizarArrayUsuarios();
             } catch (error) {
@@ -105,30 +113,36 @@ namespace pantallaUsuarios {
             }
         }
 
-        private async consultarEmpresas(): Promise<void> {
+        private consultarEmpresas(): void {
             try {
-                const response = await fetch(config.ApiConfig.API_EMPRESAS, {
-                    method: 'POST',  
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})  
-                });
+                const url = config.ApiConfig.API_EMPRESAS;
 
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Error HTTP: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Empresas recibidas:', data);
 
-                const empresas: IEmpresa[] = await response.json();
-                this.empresas = empresas;
+                        const empresas: IEmpresa[] = data;
+                        this.empresas = empresas;
 
-                this.llenarSelectEmpresas();
+                        this.llenarSelectEmpresas();
+                    })
+                    .catch(error => {
+                        console.error("Error al consultar empresas:", error);
+                        this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
+                    });
 
             } catch (error) {
                 console.error("Error al consultar empresas:", error);
                 this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
             }
         }
+
         private llenarSelectEmpresas(): void {
             this.selectEmpresa.selectAll("option:not(:first-child)").remove();
 
@@ -162,38 +176,55 @@ namespace pantallaUsuarios {
             this.selectEmpresa.property("value", "");
         }
 
-        private async guardarPersonaEnAPI(persona: IPersona): Promise<boolean> {
-            try {
-                const url = persona.id > 0
-                    ? config.ApiConfig.API_UPDATE_PERSONA
-                    : config.ApiConfig.API_CREATE_PERSONA;
+        private guardarPersonaEnAPI(persona: IPersona): Promise<{ exito: boolean, esNuevo: boolean }> {
+            return new Promise((resolve, reject) => {
+                try {
+                    const esNuevo = persona.id === 0;
 
-                const method = "POST";
+                    const url = esNuevo
+                        ? config.ApiConfig.API_CREATE_PERSONA
+                        : config.ApiConfig.API_UPDATE_PERSONA;
 
-                const respuesta = await fetch(url, {
-                    method: method,
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        id: persona.id > 0 ? persona.id : 0,
-                        nombre: persona.nombre,
-                        aPaterno: persona.aPaterno,
-                        aMaterno: persona.aMaterno,
-                        telefono: persona.telefono,
-                        fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
-                        correo: persona.correo,
-                        nameTag: persona.nameTag,
-                        empresaId: persona.empresa,
-                        enUso: true
+                    fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            id: persona.id > 0 ? persona.id : 0,
+                            nombre: persona.nombre,
+                            aPaterno: persona.aPaterno,
+                            aMaterno: persona.aMaterno,
+                            telefono: persona.telefono,
+                            fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
+                            correo: persona.correo,
+                            nameTag: persona.nameTag,
+                            empresaId: persona.empresa,
+                            enUso: true
+                        })
                     })
-                });
+                        .then(response => {
+                            resolve({
+                                exito: response.ok,
+                                esNuevo: esNuevo
+                            });
+                        })
+                        .catch(error => {
+                            console.error("Error al guardar persona:", error);
+                            resolve({
+                                exito: false,
+                                esNuevo: false
+                            });
+                        });
 
-                return respuesta.ok;
-            } catch (error) {
-                console.error("Error al guardar persona:", error);
-                return false;
-            }
+                } catch (error) {
+                    console.error("Error al guardar persona:", error);
+                    resolve({
+                        exito: false,
+                        esNuevo: false
+                    });
+                }
+            });
         }
 
         private crearVentanaPrincipal(): void {
@@ -1113,6 +1144,7 @@ namespace pantallaUsuarios {
             }
         }
 
+
         private confirmarEliminacion(): void {
             if (this.usuarioAEliminar) {
                 this.eliminarUsuarioConfirmado(this.usuarioAEliminar);
@@ -1137,26 +1169,35 @@ namespace pantallaUsuarios {
             this.limpiarSelectEmpresa();
         }
 
-        private async peticionBDEliminar(id: number): Promise<void> {
-            try {
-                const url = config.ApiConfig.API_DELETE_PERSONA;
 
-                const method = "POST";
+        private peticionBDEliminar(id: number): Promise<void> {
+            return new Promise((resolve, reject) => {
+                try {
+                    const url = config.ApiConfig.API_DELETE_PERSONA;
 
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(id)
-                });
+                    fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(id)
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Error HTTP: ${response.status}`);
+                            }
+                            resolve();
+                        })
+                        .catch(error => {
+                            console.error("Error al eliminar persona:", error);
+                            resolve();
+                        });
 
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                } catch (error) {
+                    console.error("Error al eliminar persona:", error);
+                    resolve();
                 }
-            } catch (error) {
-                console.error("Error al eliminar persona:", error);
-            }
+            });
         }
     }
 }
