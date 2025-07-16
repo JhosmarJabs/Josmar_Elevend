@@ -1,3 +1,5 @@
+declare const Swal: any
+
 namespace pantallaUsuarios {
     export enum eColumna {
         Nombre = 1,
@@ -36,10 +38,10 @@ namespace pantallaUsuarios {
         private usuariosMapeados: Map<number, IPersona> = new Map();
         private empresas: IEmpresa[] = [];
         private _UsuarioEdita: IPersona | null;
-        private usuarioAEliminar: IPersona | null = null;
+
 
         private ventanaPrincipal: d3.Selection<HTMLDivElement, any, any, any>;
-        private ventanaEliminacion: d3.Selection<HTMLDivElement, any, any, any>;
+
         private txtBusqueda: d3.Selection<HTMLInputElement, any, any, any>;
 
         private contenedorTabla: d3.Selection<HTMLDivElement, any, any, any>;
@@ -56,7 +58,6 @@ namespace pantallaUsuarios {
         private CapaBloqueo: d3.Selection<HTMLDivElement, any, any, any>;
 
         private mostrarVentanaPrincipal: boolean = false;
-        private ventanaEliminacionCreada: boolean = false;
         private ventanaCreada: boolean = false;
         private clickAnterior: { columna: number, direccion: number } = { columna: 0, direccion: 0 };
 
@@ -67,80 +68,7 @@ namespace pantallaUsuarios {
         constructor() {
             this.crearVentanaPrincipal();
             this.crearTablaEncabezado();
-            this.cargarUsuariosDesdeJSON();
-        }
-
-        private async cargarUsuariosDesdeJSON(): Promise<void> {
-            try {
-                let url = config.ApiConfig.API_PERSONAS;
-
-                if (this.ultimaFechaModificacion) {
-                    url += `?fechaModificacion=${encodeURIComponent(this.ultimaFechaModificacion)}`;
-                }
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Datos recibidos:', data);
-
-                        this.usuariosMapeados.clear();
-
-                        for (let index = 0; index < data.length; index++) {
-                            const element = data[index];
-                            const persona: IPersona = {
-                                id: element.id,
-                                nombre: element.nombre,
-                                aPaterno: element.aPaterno,
-                                aMaterno: element.aMaterno,
-                                telefono: element.telefono,
-                                fechaNacimiento: new Date(element.fechaNacimiento),
-                                correo: element.correo,
-                                nameTag: element.nameTag,
-                                empresa: element.empresaId
-                            };
-
-                            this.usuariosMapeados.set(persona.id, persona);
-                        }
-
-                        this.actualizarArrayUsuarios();
-                    })
-                    .catch(error => {
-                        console.error('Error al cargar usuarios:', error);
-                    });
-
-                this.actualizarArrayUsuarios();
-            } catch (error) {
-                console.error("Error al cargar usuarios:", error);
-            }
-        }
-
-        private consultarEmpresas(): void {
-            try {
-                const url = config.ApiConfig.API_EMPRESAS;
-
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Error HTTP: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Empresas recibidas:', data);
-
-                        const empresas: IEmpresa[] = data;
-                        this.empresas = empresas;
-
-                        this.llenarSelectEmpresas();
-                    })
-                    .catch(error => {
-                        console.error("Error al consultar empresas:", error);
-                        this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
-                    });
-
-            } catch (error) {
-                console.error("Error al consultar empresas:", error);
-                this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
-            }
+            this.cargarUsuariosAPI();
         }
 
         private llenarSelectEmpresas(): void {
@@ -174,57 +102,6 @@ namespace pantallaUsuarios {
 
         private limpiarSelectEmpresa(): void {
             this.selectEmpresa.property("value", "");
-        }
-
-        private guardarPersonaEnAPI(persona: IPersona): Promise<{ exito: boolean, esNuevo: boolean }> {
-            return new Promise((resolve, reject) => {
-                try {
-                    const esNuevo = persona.id === 0;
-
-                    const url = esNuevo
-                        ? config.ApiConfig.API_CREATE_PERSONA
-                        : config.ApiConfig.API_UPDATE_PERSONA;
-
-                    fetch(url, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            id: persona.id > 0 ? persona.id : 0,
-                            nombre: persona.nombre,
-                            aPaterno: persona.aPaterno,
-                            aMaterno: persona.aMaterno,
-                            telefono: persona.telefono,
-                            fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
-                            correo: persona.correo,
-                            nameTag: persona.nameTag,
-                            empresaId: persona.empresa,
-                            enUso: true
-                        })
-                    })
-                        .then(response => {
-                            resolve({
-                                exito: response.ok,
-                                esNuevo: esNuevo
-                            });
-                        })
-                        .catch(error => {
-                            console.error("Error al guardar persona:", error);
-                            resolve({
-                                exito: false,
-                                esNuevo: false
-                            });
-                        });
-
-                } catch (error) {
-                    console.error("Error al guardar persona:", error);
-                    resolve({
-                        exito: false,
-                        esNuevo: false
-                    });
-                }
-            });
         }
 
         private crearVentanaPrincipal(): void {
@@ -306,7 +183,7 @@ namespace pantallaUsuarios {
                 .on("mouseout", function () {
                     d3.select(this).style("background-color", "#007BFF");
                 })
-                .on("click", () => this.cargarUsuariosDesdeJSON());
+                .on("click", () => this.cargarUsuariosAPI());
 
             contenedorBotones.append("button")
                 .text("Agregar Persona")
@@ -605,7 +482,7 @@ namespace pantallaUsuarios {
                 .attr("disabled", true)
                 .text("Seleccione una empresa...");
 
-            this.consultarEmpresas();
+            this.consultarEmpresasAPI();
 
             this.formularioPersona.append("button")
                 .text("Guardar")
@@ -632,7 +509,7 @@ namespace pantallaUsuarios {
                 .style("height", "100%")
                 .style("background-color", "rgba(0, 0, 0, 0.6)")
                 .style("display", "none")
-                .style("z-index", "999");
+                .style("z-i", "999");
 
             this.formularioPersona = this.CapaBloqueo
                 .append("div")
@@ -673,129 +550,26 @@ namespace pantallaUsuarios {
             this.crearCamposFormulario();
         }
 
-        private crearVentanaEliminacion(): void {
-            this.ventanaEliminacionCreada = true;
-
-            if (!this.CapaBloqueo) {
-                this.CapaBloqueo = this.ventanaPrincipal.append("div")
-                    .attr("id", "overlay-modal")
-                    .style("position", "absolute")
-                    .style("top", "0")
-                    .style("left", "0")
-                    .style("width", "100%")
-                    .style("height", "100%")
-                    .style("background-color", "rgba(0, 0, 0, 0.6)")
-                    .style("display", "none")
-                    .style("z-index", "999");
-            }
-
-            this.ventanaEliminacion = this.ventanaPrincipal.append("div")
-                .attr("id", "modal-eliminacion")
-                .style("position", "absolute")
-                .style("top", "50%")
-                .style("left", "50%")
-                .style("transform", "translate(-50%, -50%)")
-                .style("background-color", "#fff")
-                .style("padding", "24px")
-                .style("border-radius", "12px")
-                .style("box-shadow", "0 8px 16px rgba(0,0,0,0.25)")
-                .style("z-index", "1001")
-                .style("width", "350px")
-                .style("text-align", "center")
-                .style("display", "none");
-
-            this.ventanaEliminacion.append("h3")
-                .text("Confirmar Eliminación")
-                .style("margin", "0 0 15px 0")
-                .style("color", "#dc3545")
-                .style("font-size", "18px");
-
-            this.ventanaEliminacion.append("p")
-                .attr("id", "texto-confirmacion")
-                .style("margin-bottom", "25px")
-                .style("font-size", "16px")
-                .style("color", "#333")
-                .style("line-height", "1.4");
-
-            const contenedorBotones = this.ventanaEliminacion.append("div")
-                .style("display", "flex")
-                .style("justify-content", "space-around")
-                .style("gap", "15px");
-
-            contenedorBotones.append("button")
-                .text("Cancelar")
-                .style("background-color", "#6c757d")
-                .style("color", "white")
-                .style("border", "none")
-                .style("padding", "10px 20px")
-                .style("border-radius", "6px")
-                .style("cursor", "pointer")
-                .style("font-size", "14px")
-                .style("min-width", "80px")
-                .style("transition", "background-color 0.3s")
-                .on("mouseover", function () {
-                    d3.select(this).style("background-color", "#5a6268");
-                })
-                .on("mouseout", function () {
-                    d3.select(this).style("background-color", "#6c757d");
-                })
-                .on("click", () => {
-                    this.cerrarVentanaEliminacion();
-                });
-
-            contenedorBotones.append("button")
-                .text("Eliminar")
-                .style("background-color", "#dc3545")
-                .style("color", "white")
-                .style("border", "none")
-                .style("padding", "10px 20px")
-                .style("border-radius", "6px")
-                .style("cursor", "pointer")
-                .style("font-size", "14px")
-                .style("min-width", "80px")
-                .style("transition", "background-color 0.3s")
-                .on("mouseover", function () {
-                    d3.select(this).style("background-color", "#c82333");
-                })
-                .on("mouseout", function () {
-                    d3.select(this).style("background-color", "#dc3545");
-                })
-                .on("click", () => {
-                    this.confirmarEliminacion();
-                });
-
-            this.ventanaEliminacion.append("button")
-                .text("×")
-                .style("position", "absolute")
-                .style("top", "10px")
-                .style("right", "15px")
-                .style("background", "transparent")
-                .style("border", "none")
-                .style("font-size", "20px")
-                .style("font-weight", "bold")
-                .style("color", "#999")
-                .style("cursor", "pointer")
-                .style("line-height", "1")
-                .on("mouseover", function () {
-                    d3.select(this).style("color", "#333");
-                })
-                .on("mouseout", function () {
-                    d3.select(this).style("color", "#999");
-                })
-                .on("click", () => {
-                    this.cerrarVentanaEliminacion();
-                });
-
-            this.CapaBloqueo.on("click", (event) => {
-                if (event.target === this.CapaBloqueo.node()) {
-                    this.cerrarVentanaEliminacion();
-                }
-            });
-        }
-
         public alternarVentanaPrincipal(): void {
             this.mostrarVentanaPrincipal = !this.mostrarVentanaPrincipal;
             this.ventanaPrincipal.style("display", this.mostrarVentanaPrincipal ? "block" : "none");
+        }
+
+        private AbrirFormularioPorId(usuarioId: number): void {
+            
+            const usuario = this.usuariosMapeados.get(usuarioId);
+
+            if (usuario) {
+                this.AbrirFormulario(usuario);
+            } else {
+                console.error('Usuario no encontrado:', usuarioId);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Usuario no encontrado',
+                    text: 'No se pudo cargar la información del usuario',
+                    confirmButtonText: 'Entendido'
+                });
+            }
         }
 
         private AbrirFormulario(_Usuario: IPersona) {
@@ -821,30 +595,10 @@ namespace pantallaUsuarios {
             }
         }
 
-        private abrirVentanaEliminacion(usuario: IPersona): void {
-            if (!this.ventanaEliminacionCreada) {
-                this.crearVentanaEliminacion();
-            }
-
-            this.usuarioAEliminar = usuario;
-
-            this.ventanaEliminacion.select("#texto-confirmacion")
-                .text(`¿Deseas eliminar a ${usuario.nombre} ${usuario.aPaterno}?`);
-
-            this.ventanaEliminacion.style("display", "block");
-            this.CapaBloqueo.style("display", "flex");
-        }
-
         private CerrarFormulario() {
             this.formularioPersona.style("display", "none");
             this.CapaBloqueo.style("display", "none");
             this.limpiarFormularioPersona();
-        }
-
-        private cerrarVentanaEliminacion(): void {
-            this.ventanaEliminacion.style("display", "none");
-            this.CapaBloqueo.style("display", "none");
-            this.usuarioAEliminar = null;
         }
 
         private actualizarArrayUsuarios(_columna: number = -1): void {
@@ -983,7 +737,7 @@ namespace pantallaUsuarios {
                             .style("height", "28px")
                             .style("font-size", "18px")
                             .style("cursor", "pointer")
-                            .on("click", (_, d: IPersona) => this.AbrirFormulario(d));
+                            .on("click", (_, d: IPersona) => this.AbrirFormularioPorId(d.id));
 
                         acciones.append("button")
                             .text("-")
@@ -995,7 +749,7 @@ namespace pantallaUsuarios {
                             .style("height", "28px")
                             .style("font-size", "18px")
                             .style("cursor", "pointer")
-                            .on("click", (_, d: IPersona) => this.abrirVentanaEliminacion(d));
+                            .on("click", (_, d: IPersona) => this.confirmarEliminarPersona(d));
 
                         filaEnter.append("div")
                             .attr("id", "txtNombre")
@@ -1107,7 +861,272 @@ namespace pantallaUsuarios {
                 );
         }
 
-        private async GuardarFormulario(): Promise<void> {
+        private limpiarFormularioPersona(): void {
+            this.txtNombre.property("value", "");
+            this.txtAPaterno.property("value", "");
+            this.txtAMaterno.property("value", "");
+            this.txtCorreo.property("value", "");
+            this.txtUserName.property("value", "");
+            this.txtTelefono.property("value", "");
+            this.txtFechaNacimiento.property("value", "");
+            this.limpiarSelectEmpresa();
+        }
+
+        private cargarUsuariosAPI(): void {
+            const url = config.ApiConfig.API_PERSONAS;
+
+            const requestBody = this.ultimaFechaModificacion
+                ? { FModificacion: this.ultimaFechaModificacion }
+                : {};
+
+
+            Swal.fire({
+                title: 'Cargando usuarios...',
+                text: 'Obteniendo datos del servidor',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Datos recibidos:', data);
+
+                    for (let i = 0; i < data.length; i++) {
+                        const element = data[i];
+                        const persona: IPersona = {
+                            id: element.id,
+                            nombre: element.nombre,
+                            aPaterno: element.aPaterno,
+                            aMaterno: element.aMaterno,
+                            telefono: element.telefono,
+                            fechaNacimiento: new Date(element.fechaNacimiento),
+                            correo: element.correo,
+                            nameTag: element.nameTag,
+                            empresa: element.empresaId
+                        };
+
+                        this.usuariosMapeados.set(persona.id, persona);
+                    }
+
+                    if (data.length > 0) {
+                        const ultimoElemento = data[data.length - 1];
+                        if (ultimoElemento.fModificacion) {
+                            this.ultimaFechaModificacion = ultimoElemento.fModificacion;
+                        }
+                    }
+
+                    this.actualizarArrayUsuarios();
+
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Usuarios cargados!',
+                        text: `Se cargaron ${data.length} usuarios correctamente`,
+                        timer: 2000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar usuarios:', error);
+
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al cargar usuarios',
+                        text: 'No se pudieron obtener los datos del servidor',
+                        confirmButtonText: 'Reintentar'
+                    });
+                });
+        }
+
+        private consultarEmpresasAPI(): void {
+            const url = config.ApiConfig.API_EMPRESAS;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Empresas recibidas:', data);
+
+                    const empresas: IEmpresa[] = data;
+                    this.empresas = empresas;
+                    this.llenarSelectEmpresas();
+
+
+                    if (data.length > 0) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Empresas cargadas',
+                            text: `${data.length} empresas disponibles`,
+                            timer: 1500,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al consultar empresas:", error);
+                    this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
+
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al cargar empresas',
+                        text: 'No se pudieron obtener las empresas disponibles',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
+        }
+
+        private crearPersonaAPI(persona: IPersona): void {
+
+            Swal.fire({
+                title: 'Creando persona...',
+                text: 'Guardando nueva persona',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(config.ApiConfig.API_CREATE_PERSONA, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: 0,
+                    nombre: persona.nombre,
+                    aPaterno: persona.aPaterno,
+                    aMaterno: persona.aMaterno,
+                    telefono: persona.telefono,
+                    fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
+                    correo: persona.correo,
+                    nameTag: persona.nameTag,
+                    empresaId: persona.empresa,
+                    enUso: true
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Persona creada:', data);
+
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Persona creada!',
+                        text: `${persona.nombre} ${persona.aPaterno} ha sido creado correctamente`,
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+
+                    this.cargarUsuariosAPI();
+                    this.CerrarFormulario();
+                })
+                .catch(error => {
+                    console.error("Error al crear persona:", error);
+
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al crear persona',
+                        text: 'No se pudo guardar la nueva persona. Inténtalo de nuevo.',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
+        }
+
+        private actualizarPersonaAPI(persona: IPersona): void {
+
+            Swal.fire({
+                title: 'Actualizando persona...',
+                text: 'Guardando cambios',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(config.ApiConfig.API_UPDATE_PERSONA, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: persona.id,
+                    nombre: persona.nombre,
+                    aPaterno: persona.aPaterno,
+                    aMaterno: persona.aMaterno,
+                    telefono: persona.telefono,
+                    fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
+                    correo: persona.correo,
+                    nameTag: persona.nameTag,
+                    empresaId: persona.empresa,
+                    enUso: true
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Persona actualizada:', data);
+
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Persona actualizada!',
+                        text: `Los datos de ${persona.nombre} ${persona.aPaterno} han sido actualizados`,
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+
+                    this.cargarUsuariosAPI();
+                    this.CerrarFormulario();
+                })
+                .catch(error => {
+                    console.error("Error al actualizar persona:", error);
+
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al actualizar persona',
+                        text: 'No se pudieron guardar los cambios. Inténtalo de nuevo.',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
+        }
+
+        private guardarPersonaAPI(persona: IPersona): void {
+            const esNuevo = persona.id === 0;
+
+            if (esNuevo) {
+                this.crearPersonaAPI(persona);
+            } else {
+                this.actualizarPersonaAPI(persona);
+            }
+        }
+
+        private GuardarFormulario(): void {
             const nombre = this.txtNombre.property("value");
             const aPaterno = this.txtAPaterno.property("value");
             const aMaterno = this.txtAMaterno.property("value");
@@ -1117,8 +1136,48 @@ namespace pantallaUsuarios {
             const nameTag = this.txtUserName.property("value");
             const empresa = this.obtenerEmpresaSeleccionada();
 
+
             if (!empresa) {
-                alert("Por favor seleccione una empresa");
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Empresa requerida',
+                    text: 'Por favor seleccione una empresa antes de continuar',
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+
+            if (!nombre.trim()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Nombre requerido',
+                    text: 'El nombre es obligatorio',
+                    confirmButtonText: 'Entendido'
+                });
+                this.txtNombre.node()?.focus();
+                return;
+            }
+
+            if (!aPaterno.trim()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Apellido requerido',
+                    text: 'El apellido paterno es obligatorio',
+                    confirmButtonText: 'Entendido'
+                });
+                this.txtAPaterno.node()?.focus();
+                return;
+            }
+
+            if (isNaN(telefono) || telefono <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Teléfono inválido',
+                    text: 'Ingrese un número de teléfono válido',
+                    confirmButtonText: 'Entendido'
+                });
+                this.txtTelefono.node()?.focus();
                 return;
             }
 
@@ -1134,70 +1193,83 @@ namespace pantallaUsuarios {
                 empresa
             };
 
-            const exito = await this.guardarPersonaEnAPI(persona);
-
-            if (exito) {
-                await this.cargarUsuariosDesdeJSON();
-                this.CerrarFormulario();
-            } else {
-                alert("Error al guardar la persona");
-            }
-        }
-
-
-        private confirmarEliminacion(): void {
-            if (this.usuarioAEliminar) {
-                this.eliminarUsuarioConfirmado(this.usuarioAEliminar);
-                this.cerrarVentanaEliminacion();
-            }
-        }
-
-        private eliminarUsuarioConfirmado(usuario: IPersona): void {
-            this.peticionBDEliminar(usuario.id)
-            this.usuariosMapeados.delete(usuario.id);
+            this.guardarPersonaAPI(persona);
             this.actualizarArrayUsuarios();
         }
 
-        private limpiarFormularioPersona(): void {
-            this.txtNombre.property("value", "");
-            this.txtAPaterno.property("value", "");
-            this.txtAMaterno.property("value", "");
-            this.txtCorreo.property("value", "");
-            this.txtUserName.property("value", "");
-            this.txtTelefono.property("value", "");
-            this.txtFechaNacimiento.property("value", "");
-            this.limpiarSelectEmpresa();
+        private confirmarEliminarPersona(usuario: IPersona): void {
+            Swal.fire({
+                title: '¿Eliminar persona?',
+                text: `¿Estás seguro de eliminar a ${usuario.nombre} ${usuario.aPaterno}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.eliminarPersonaAPI(usuario.id);
+                    this.usuariosMapeados.delete(usuario.id);
+                    this.actualizarArrayUsuarios();
+                }
+            });
         }
 
 
-        private peticionBDEliminar(id: number): Promise<void> {
-            return new Promise((resolve, reject) => {
-                try {
-                    const url = config.ApiConfig.API_DELETE_PERSONA;
+        private eliminarPersonaAPI(id: number): void {
 
-                    fetch(url, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(id)
-                    })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`Error HTTP: ${response.status}`);
-                            }
-                            resolve();
-                        })
-                        .catch(error => {
-                            console.error("Error al eliminar persona:", error);
-                            resolve();
-                        });
-
-                } catch (error) {
-                    console.error("Error al eliminar persona:", error);
-                    resolve();
+            Swal.fire({
+                title: 'Eliminando persona...',
+                text: 'Procesando solicitud',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
                 }
             });
+
+            const url = config.ApiConfig.API_DELETE_PERSONA;
+
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(id)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Persona eliminada correctamente:", data);
+
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Eliminado!',
+                        text: 'La persona ha sido eliminada correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+
+                    this.cargarUsuariosAPI();
+                })
+                .catch(error => {
+                    console.error("Error al eliminar persona:", error);
+
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al eliminar',
+                        text: 'No se pudo eliminar la persona. Inténtalo de nuevo.',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
         }
     }
 }

@@ -1,6 +1,6 @@
 namespace config {
     export class ApiConfig {
-        public static readonly API_BASE_URL: string = "http://localhost:5075/MiWebService";
+        public static readonly API_BASE_URL: string = "http://192.168.15.135:5075/MiWebService";
 
         public static readonly API_PERSONAS: string = `${ApiConfig.API_BASE_URL}/GetPersonas`;
         public static readonly API_CREATE_PERSONA: string = `${ApiConfig.API_BASE_URL}/CreatePersona`;

@@ -2,7 +2,7 @@ var config;
 (function (config) {
     class ApiConfig {
     }
-    ApiConfig.API_BASE_URL = "http://localhost:5075/MiWebService";
+    ApiConfig.API_BASE_URL = "http://192.168.15.135:5075/MiWebService";
     ApiConfig.API_PERSONAS = `${ApiConfig.API_BASE_URL}/GetPersonas`;
     ApiConfig.API_CREATE_PERSONA = `${ApiConfig.API_BASE_URL}/CreatePersona`;
     ApiConfig.API_UPDATE_PERSONA = `${ApiConfig.API_BASE_URL}/UpdatePersona`;
