@@ -1,5 +1,3 @@
-declare const Swal: any
-
 namespace pantallaUsuarios {
     export enum eColumna {
         Nombre = 1,
@@ -9,35 +7,17 @@ namespace pantallaUsuarios {
         Fecha = 5,
     }
 
-    export interface IClave {
-        id: number;
-        nombre: string;
-    }
-
-    export interface IEmpresa {
-        id: number;
-        nombre: string;
-        ubicacion: string;
-        fechaRegistro: string;
-        fechaModificacion: string;
-        enUso: boolean;
-    }
-
-    export interface IPersona extends IClave {
-        aPaterno: string;
-        aMaterno: string;
-        telefono: number;
-        fechaNacimiento: Date;
-        correo: string;
-        nameTag: string;
-        empresa: number
-    }
 
     export class pantallaUsuarios {
+        // Acces a la api
+        private userData = new data.datoUsuarios();
+        private empresaData = new data.datoEmpresas();
 
-        private usuariosMapeados: Map<number, IPersona> = new Map();
-        private empresas: IEmpresa[] = [];
-        private _UsuarioEdita: IPersona | null;
+
+
+
+        private empresas: entidades.IEmpresa[] = [];
+        private _UsuarioEdita: entidades.IPersona | null;
 
 
         private ventanaPrincipal: d3.Selection<HTMLDivElement, any, any, any>;
@@ -61,14 +41,18 @@ namespace pantallaUsuarios {
         private ventanaCreada: boolean = false;
         private clickAnterior: { columna: number, direccion: number } = { columna: 0, direccion: 0 };
 
-        private ultimaFechaModificacion: string | null = null;
+
+
+
+
+
 
         formatTime = d3.utcFormat("%d %B, %Y");
 
         constructor() {
             this.crearVentanaPrincipal();
             this.crearTablaEncabezado();
-            this.cargarUsuariosAPI();
+            this.userData.loadUsersAPI();
         }
 
         private llenarSelectEmpresas(): void {
@@ -183,7 +167,7 @@ namespace pantallaUsuarios {
                 .on("mouseout", function () {
                     d3.select(this).style("background-color", "#007BFF");
                 })
-                .on("click", () => this.cargarUsuariosAPI());
+                .on("click", () => this.userData.loadUsersAPI());
 
             contenedorBotones.append("button")
                 .text("Agregar Persona")
@@ -556,23 +540,18 @@ namespace pantallaUsuarios {
         }
 
         private AbrirFormularioPorId(usuarioId: number): void {
-            
-            const usuario = this.usuariosMapeados.get(usuarioId);
+
+            const usuario = this.userData.usuariosMapeados.get(usuarioId);
 
             if (usuario) {
                 this.AbrirFormulario(usuario);
             } else {
                 console.error('Usuario no encontrado:', usuarioId);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Usuario no encontrado',
-                    text: 'No se pudo cargar la información del usuario',
-                    confirmButtonText: 'Entendido'
-                });
+
             }
         }
 
-        private AbrirFormulario(_Usuario: IPersona) {
+        private AbrirFormulario(_Usuario: entidades.IPersona) {
             if (!this.ventanaCreada) {
                 this.crearFormularioPersona();
             }
@@ -602,7 +581,7 @@ namespace pantallaUsuarios {
         }
 
         private actualizarArrayUsuarios(_columna: number = -1): void {
-            var usuariosVisibles: Array<IPersona> = Array.from(this.usuariosMapeados.values());
+            var usuariosVisibles: Array<entidades.IPersona> = Array.from(this.userData.usuariosMapeados.values());
 
             const busqueda = String(this.txtBusqueda.property("value")).toLowerCase();
 
@@ -707,8 +686,8 @@ namespace pantallaUsuarios {
             this.actualizarTabla(usuariosVisibles);
         }
 
-        private actualizarTabla(_arrayUsuarios?: Array<IPersona>): void {
-            this.contenedorTabla.selectAll<HTMLDivElement, IPersona>(".fila")
+        private actualizarTabla(_arrayUsuarios?: Array<entidades.IPersona>): void {
+            this.contenedorTabla.selectAll<HTMLDivElement, entidades.IPersona>(".fila")
                 .data(_arrayUsuarios, d => d.id)
                 .join(
                     enter => {
@@ -737,7 +716,7 @@ namespace pantallaUsuarios {
                             .style("height", "28px")
                             .style("font-size", "18px")
                             .style("cursor", "pointer")
-                            .on("click", (_, d: IPersona) => this.AbrirFormularioPorId(d.id));
+                            .on("click", (_, d: entidades.IPersona) => this.AbrirFormularioPorId(d.id));
 
                         acciones.append("button")
                             .text("-")
@@ -749,7 +728,7 @@ namespace pantallaUsuarios {
                             .style("height", "28px")
                             .style("font-size", "18px")
                             .style("cursor", "pointer")
-                            .on("click", (_, d: IPersona) => this.confirmarEliminarPersona(d));
+                            .on("click", (_, d: entidades.IPersona) => this.confirmarEliminarPersona(d));
 
                         filaEnter.append("div")
                             .attr("id", "txtNombre")
@@ -872,83 +851,7 @@ namespace pantallaUsuarios {
             this.limpiarSelectEmpresa();
         }
 
-        private cargarUsuariosAPI(): void {
-            const url = config.ApiConfig.API_PERSONAS;
 
-            const requestBody = this.ultimaFechaModificacion
-                ? { FModificacion: this.ultimaFechaModificacion }
-                : {};
-
-
-            Swal.fire({
-                title: 'Cargando usuarios...',
-                text: 'Obteniendo datos del servidor',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Datos recibidos:', data);
-
-                    for (let i = 0; i < data.length; i++) {
-                        const element = data[i];
-                        const persona: IPersona = {
-                            id: element.id,
-                            nombre: element.nombre,
-                            aPaterno: element.aPaterno,
-                            aMaterno: element.aMaterno,
-                            telefono: element.telefono,
-                            fechaNacimiento: new Date(element.fechaNacimiento),
-                            correo: element.correo,
-                            nameTag: element.nameTag,
-                            empresa: element.empresaId
-                        };
-
-                        this.usuariosMapeados.set(persona.id, persona);
-                    }
-
-                    if (data.length > 0) {
-                        const ultimoElemento = data[data.length - 1];
-                        if (ultimoElemento.fModificacion) {
-                            this.ultimaFechaModificacion = ultimoElemento.fModificacion;
-                        }
-                    }
-
-                    this.actualizarArrayUsuarios();
-
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Usuarios cargados!',
-                        text: `Se cargaron ${data.length} usuarios correctamente`,
-                        timer: 2000,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
-                    });
-                })
-                .catch(error => {
-                    console.error('Error al cargar usuarios:', error);
-
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al cargar usuarios',
-                        text: 'No se pudieron obtener los datos del servidor',
-                        confirmButtonText: 'Reintentar'
-                    });
-                });
-        }
 
         private consultarEmpresasAPI(): void {
             const url = config.ApiConfig.API_EMPRESAS;
@@ -969,21 +872,13 @@ namespace pantallaUsuarios {
                 .then(data => {
                     console.log('Empresas recibidas:', data);
 
-                    const empresas: IEmpresa[] = data;
+                    const empresas: entidades.IEmpresa[] = data;
                     this.empresas = empresas;
                     this.llenarSelectEmpresas();
 
 
                     if (data.length > 0) {
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Empresas cargadas',
-                            text: `${data.length} empresas disponibles`,
-                            timer: 1500,
-                            showConfirmButton: false,
-                            toast: true,
-                            position: 'top-end'
-                        });
+                        
                     }
                 })
                 .catch(error => {
@@ -991,138 +886,41 @@ namespace pantallaUsuarios {
                     this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
 
 
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al cargar empresas',
-                        text: 'No se pudieron obtener las empresas disponibles',
-                        confirmButtonText: 'Entendido'
-                    });
+
                 });
         }
 
-        private crearPersonaAPI(persona: IPersona): void {
-
-            Swal.fire({
-                title: 'Creando persona...',
-                text: 'Guardando nueva persona',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch(config.ApiConfig.API_CREATE_PERSONA, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    id: 0,
-                    nombre: persona.nombre,
-                    aPaterno: persona.aPaterno,
-                    aMaterno: persona.aMaterno,
-                    telefono: persona.telefono,
-                    fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
-                    correo: persona.correo,
-                    nameTag: persona.nameTag,
-                    empresaId: persona.empresa,
-                    enUso: true
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Persona creada:', data);
-
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Persona creada!',
-                        text: `${persona.nombre} ${persona.aPaterno} ha sido creado correctamente`,
-                        timer: 2500,
-                        showConfirmButton: false
-                    });
-
-                    this.cargarUsuariosAPI();
-                    this.CerrarFormulario();
-                })
-                .catch(error => {
-                    console.error("Error al crear persona:", error);
-
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al crear persona',
-                        text: 'No se pudo guardar la nueva persona. Inténtalo de nuevo.',
-                        confirmButtonText: 'Entendido'
-                    });
-                });
+        private CrearPersonaPU(persona: entidades.IPersona) {
+            this.userData.createUserAPI(persona);
+            // si la respuesta fue correcta que se ejecute esto
+            this.userData.loadUsersAPI();
+            this.CerrarFormulario();
         }
 
-        private actualizarPersonaAPI(persona: IPersona): void {
-
-            Swal.fire({
-                title: 'Actualizando persona...',
-                text: 'Guardando cambios',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch(config.ApiConfig.API_UPDATE_PERSONA, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    id: persona.id,
-                    nombre: persona.nombre,
-                    aPaterno: persona.aPaterno,
-                    aMaterno: persona.aMaterno,
-                    telefono: persona.telefono,
-                    fechaNacimiento: persona.fechaNacimiento.toISOString().split('T')[0],
-                    correo: persona.correo,
-                    nameTag: persona.nameTag,
-                    empresaId: persona.empresa,
-                    enUso: true
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Persona actualizada:', data);
-
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Persona actualizada!',
-                        text: `Los datos de ${persona.nombre} ${persona.aPaterno} han sido actualizados`,
-                        timer: 2500,
-                        showConfirmButton: false
-                    });
-
-                    this.cargarUsuariosAPI();
-                    this.CerrarFormulario();
-                })
-                .catch(error => {
-                    console.error("Error al actualizar persona:", error);
-
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al actualizar persona',
-                        text: 'No se pudieron guardar los cambios. Inténtalo de nuevo.',
-                        confirmButtonText: 'Entendido'
-                    });
-                });
+        private actualizarPersonaPU(persona: entidades.IPersona) {
+            this.userData.updateUserAPI(persona);
+            // si la respuesta fue correcta que se ejecute esto
+            this.userData.loadUsersAPI();
+            this.CerrarFormulario();
         }
 
-        private guardarPersonaAPI(persona: IPersona): void {
+        private eliminarPersonaPU(id: number) {
+            this.userData.deleteUserAPI(id);
+            // si la respuesta fue correcta que se ejecute esto
+            this.userData.loadUsersAPI();
+        }
+
+
+
+
+
+        private guardarPersonaAPI(persona: entidades.IPersona): void {
             const esNuevo = persona.id === 0;
 
             if (esNuevo) {
-                this.crearPersonaAPI(persona);
+                this.userData.createUserAPI(persona);
             } else {
-                this.actualizarPersonaAPI(persona);
+                this.userData.updateUserAPI(persona);
             }
         }
 
@@ -1138,50 +936,28 @@ namespace pantallaUsuarios {
 
 
             if (!empresa) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Empresa requerida',
-                    text: 'Por favor seleccione una empresa antes de continuar',
-                    confirmButtonText: 'Entendido'
-                });
+
                 return;
             }
 
 
             if (!nombre.trim()) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Nombre requerido',
-                    text: 'El nombre es obligatorio',
-                    confirmButtonText: 'Entendido'
-                });
+
                 this.txtNombre.node()?.focus();
                 return;
             }
 
             if (!aPaterno.trim()) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Apellido requerido',
-                    text: 'El apellido paterno es obligatorio',
-                    confirmButtonText: 'Entendido'
-                });
-                this.txtAPaterno.node()?.focus();
+                
                 return;
             }
 
             if (isNaN(telefono) || telefono <= 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Teléfono inválido',
-                    text: 'Ingrese un número de teléfono válido',
-                    confirmButtonText: 'Entendido'
-                });
-                this.txtTelefono.node()?.focus();
+                
                 return;
             }
 
-            const persona: IPersona = {
+            const persona: entidades.IPersona = {
                 id: this._UsuarioEdita ? this._UsuarioEdita.id : 0,
                 nombre,
                 aPaterno,
@@ -1197,79 +973,12 @@ namespace pantallaUsuarios {
             this.actualizarArrayUsuarios();
         }
 
-        private confirmarEliminarPersona(usuario: IPersona): void {
-            Swal.fire({
-                title: '¿Eliminar persona?',
-                text: `¿Estás seguro de eliminar a ${usuario.nombre} ${usuario.aPaterno}?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this.eliminarPersonaAPI(usuario.id);
-                    this.usuariosMapeados.delete(usuario.id);
-                    this.actualizarArrayUsuarios();
-                }
-            });
+        private confirmarEliminarPersona(usuario: entidades.IPersona): void {
+            
+            
         }
 
 
-        private eliminarPersonaAPI(id: number): void {
 
-            Swal.fire({
-                title: 'Eliminando persona...',
-                text: 'Procesando solicitud',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            const url = config.ApiConfig.API_DELETE_PERSONA;
-
-            fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(id)
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Error HTTP: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Persona eliminada correctamente:", data);
-
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Eliminado!',
-                        text: 'La persona ha sido eliminada correctamente',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-
-
-                    this.cargarUsuariosAPI();
-                })
-                .catch(error => {
-                    console.error("Error al eliminar persona:", error);
-
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al eliminar',
-                        text: 'No se pudo eliminar la persona. Inténtalo de nuevo.',
-                        confirmButtonText: 'Entendido'
-                    });
-                });
-        }
     }
 }
