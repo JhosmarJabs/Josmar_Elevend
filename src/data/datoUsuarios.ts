@@ -2,19 +2,20 @@ namespace data {
 
     export class datoUsuarios {
         private _error = new Data.ErrorData();
-        private _alert = new controller.Notificacion();
+        // private _alert = new controller.Notificacion();
         public usuariosMapeados: Map<number, entidades.IPersona> = new Map();
         private ultimaFechaModificacion: string = '';
-        private onDataUpdated: (() => void) | null = null;
+        private finalizado: (() => void) | null = null;
 
-        // Método para establecer callback cuando los datos se actualizan
-        public setOnDataUpdated(callback: () => void): void {
-            this.onDataUpdated = callback;
-        }
+        /*         public establecerAlActualizarDatos(callback: () => void): void {
+                    this.alActualizarDatos = callback;
+                } */
+
 
         // Public
-        public loadUsersAPI(): void {
-            this.cargarUsuarios();
+        public loadUsersAPI(): Number {
+            return this.cargarUsuarios((resp: number) => {});
+            // return 1;
         }
 
         public createUserAPI(persona: entidades.IPersona): void {
@@ -29,6 +30,13 @@ namespace data {
             this.eliminarPersona(id);
         }
 
+        public getUsersArray(): entidades.IPersona[] {
+            return Array.from(this.usuariosMapeados.values());
+        }
+
+        public getUserById(id: number): entidades.IPersona {
+            return this.usuariosMapeados.get(id);
+        }
 
 
 
@@ -43,10 +51,8 @@ namespace data {
 
 
 
-
-
-
-        private cargarUsuarios() {
+        // private
+        private cargarUsuarios(callback: (resp: number) => void): number {
             let resp: number;
 
             const url = config.ApiConfig.API_PERSONAS;
@@ -54,6 +60,7 @@ namespace data {
             const requestBody = this.ultimaFechaModificacion
                 ? { FModificacion: this.ultimaFechaModificacion }
                 : {};
+
             fetch(url, {
                 method: 'POST',
                 headers: {
@@ -63,8 +70,8 @@ namespace data {
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Datos recibidos:', data);
 
+                    console.log(data, this.ultimaFechaModificacion);
                     for (let i = 0; i < data.length; i++) {
                         const element = data[i];
                         const persona: entidades.IPersona = {
@@ -80,26 +87,20 @@ namespace data {
                         };
 
                         this.usuariosMapeados.set(persona.id, persona);
-                    }
-
-                    if (data.length > 0) {
-                        const ultimoElemento = data[data.length - 1];
-                        if (ultimoElemento.fModificacion) {
-                            this.ultimaFechaModificacion = ultimoElemento.fModificacion;
+                        if(element.fModificacion > this.ultimaFechaModificacion){
+                            this.ultimaFechaModificacion = element.fModificacion;
                         }
                     }
 
                     resp = this._error.analizaRespuesta(data.length, 1);
-                    
-                    // Notificar que los datos se actualizaron
-                    if (this.onDataUpdated) {
-                        this.onDataUpdated();
-                    }
+
+                    callback(resp);
                 })
                 .catch(error => {
                     console.error('Error al cargar usuarios:', error);
+                    callback(null);
                 });
-            
+
             return resp;
         }
 
@@ -126,8 +127,10 @@ namespace data {
                 .then(data => {
                     console.log('Persona creada:', data);
                     this._error.analizaRespuesta(data, 2);
-                    
-                    // Recargar usuarios para actualizar el Map
+
+                    if (this.finalizado) {
+                        this.finalizado();
+                    }
                     this.loadUsersAPI();
                 })
                 .catch(error => {
@@ -158,8 +161,9 @@ namespace data {
                 .then(data => {
                     console.log('Persona actualizada:', data);
                     this._error.analizaRespuesta(data, 3);
-                    
-                    // Recargar usuarios para actualizar el Map
+                    if (this.finalizado) {
+                        this.finalizado();
+                    }
                     this.loadUsersAPI();
                 })
                 .catch(error => {
@@ -167,7 +171,8 @@ namespace data {
                 });
         }
 
-        private eliminarPersona(id: number): void {
+        private eliminarPersona(id: number): number {
+            let resp: number;
             const url = config.ApiConfig.API_DELETE_PERSONA;
 
             fetch(url, {
@@ -184,18 +189,20 @@ namespace data {
                     return response.json();
                 })
                 .then(data => {
+                    // callback
                     console.log("Persona eliminada correctamente:", data);
-                    this._error.analizaRespuesta(data, 4);
+                    resp = this._error.analizaRespuesta(data, 4);
                     this.usuariosMapeados.delete(id);
-                    
-                    // Notificar que los datos se actualizaron
-                    if (this.onDataUpdated) {
-                        this.onDataUpdated();
+
+                    if (this.finalizado) {
+                        this.finalizado();
                     }
                 })
                 .catch(error => {
                     console.error("Error al eliminar persona:", error);
                 });
+
+            return resp;
         }
 
     }

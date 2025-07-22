@@ -24,7 +24,7 @@
             if (!this._usuarios) {
               this._usuarios = new pantallaUsuarios.pantallaUsuarios();
             }
-            this._usuarios.alternarVentanaPrincipal();
+            this._usuarios.verPantalla();
           });
 
         d3.select<HTMLBodyElement, unknown>("body")

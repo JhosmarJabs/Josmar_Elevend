@@ -1,11 +1,19 @@
 namespace data {
-
     export class datoEmpresas {
+        private empresas: entidades.IEmpresa[] = []
 
-        private consultarEmpresasAPI(): void {
+        public loaderEmpresasAPI(): void {
+            this.cargarEmpresas();
+        }
+
+        public getEmpresas(): entidades.IEmpresa[] {
+            return this.empresas;
+        }
+
+        private cargarEmpresas(): void {
             const url = config.ApiConfig.API_EMPRESAS;
 
-           /*  fetch(url, {
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -19,37 +27,16 @@ namespace data {
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Empresas recibidas:', data);
-
                     const empresas: entidades.IEmpresa[] = data;
                     this.empresas = empresas;
-                    this.llenarSelectEmpresas();
-
 
                     if (data.length > 0) {
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Empresas cargadas',
-                            text: `${data.length} empresas disponibles`,
-                            timer: 1500,
-                            showConfirmButton: false,
-                            toast: true,
-                            position: 'top-end'
-                        });
+
                     }
                 })
                 .catch(error => {
                     console.error("Error al consultar empresas:", error);
-                    this.mostrarErrorEmpresa("No se pudieron cargar las empresas");
-
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al cargar empresas',
-                        text: 'No se pudieron obtener las empresas disponibles',
-                        confirmButtonText: 'Entendido'
-                    });
-                }); */
+                });
         }
     }
 }

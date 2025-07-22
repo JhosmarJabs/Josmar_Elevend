@@ -1,5 +1,12 @@
 namespace entidades {
-
+    export enum eColumna {
+        Nombre = 1,
+        APaterno = 2,
+        AMaterno = 3,
+        Telefono = 4,
+        Fecha = 5,
+    }
+    
     export interface IEmpresa {
         id: number;
         nombre: string;
@@ -22,8 +29,8 @@ namespace entidades {
     }
 
     export interface iNotificacion {
-        type: string, 
-        title: string, 
+        type: string,
+        title: string,
         message: string
     }
 }

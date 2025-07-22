@@ -6,7 +6,7 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
    <script src="lib/d3.v7.min.js"></script>
-   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+   <!-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> -->
    <link rel="icon" type="image/x-icon" href="favicon.ico">
    <title>Practicas</title>
 
@@ -21,12 +21,22 @@
 </style>
 
 <body>
+   <!-- Controller -->
+   <script src="js/controller/eliminacion.js"></script>
+   <script src="js/controller/formulario.js"></script>
    <script src="js/controller/notificacion.js"></script>
    <script src="js/controller/ventana.js"></script>
-   <script src="js/models/entidades.js"></script>
+   <script src="js/controller/ventanaFormulario.js"></script>
+   
+   <!-- Data -->
    <script src="js/data/datoUsuarios.js"></script>
    <script src="js/data/datoEmpresas.js"></script>
    <script src="js/data/error.js"></script>
+   
+   <!-- Models -->
+   <script src="js/models/entidades.js"></script>
+   
+   <!-- Principal -->
    <script src="js/config.js"></script>
    <script src="js/figuras.js"></script>
    <script src="js/pantallaUsuarios.js"></script>
