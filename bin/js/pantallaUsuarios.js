@@ -16,33 +16,27 @@ var pantallaUsuarios;
         }
         // Area de Usuarios
         cargarUsuariosPU() {
-            this.userData.loadUsersAPI();
-            this.actualizarArrayUsuarios();
-        }
-        CrearPersonaPU(persona) {
-            this.userData.createUserAPI(persona);
-            // si la respuesta fue correcta que se ejecute esto () = > ()
-            this.userData.loadUsersAPI();
-            // this.CerrarFormulario();
-        }
-        actualizarPersonaPU(persona) {
-            this.userData.updateUserAPI(persona);
-            // si la respuesta fue correcta que se ejecute esto () = > ()
-            this.userData.loadUsersAPI();
-            // this.CerrarFormulario();
+            this.userData.loadUsersAPI((resp) => {
+                if (resp > 0)
+                    this.actualizarArrayUsuarios();
+            });
         }
         eliminarPersonaPU(user) {
             this.controllerDelete.asignarPadre(this.ventanaPadre);
             this.controllerDelete.mostrarConfirmacion(user.nombre, (confirmar) => {
                 if (confirmar) {
                     this.userData.deleteUserAPI(user.id);
-                    this.userData.loadUsersAPI();
-                    this.actualizarArrayUsuarios();
+                    this.cargarUsuariosPU();
                 }
             });
         }
+        llamarFormularioUP(persona) {
+            this.viewForm.asignarPadre(this.ventanaPadre);
+            this.viewForm.mostrarFormulario(persona, () => {
+                this.cargarUsuariosPU();
+            });
+        }
         actualizarArrayUsuarios(_columna = -1) {
-            // this.userData.loadUsersAPI();
             var usuariosVisibles = Array.from(this.userData.getUsersArray());
             const busqueda = String(this.txtBusqueda.property("value")).toLowerCase();
             if (busqueda != "") {
@@ -153,6 +147,26 @@ var pantallaUsuarios;
                 .style("flex-grow", "1")
                 .style("margin-right", "20px")
                 .call(div => {
+                this.txtBusqueda = div.append("input")
+                    .attr("type", "text")
+                    .attr("id", "filtro-input")
+                    .attr("placeholder", "Buscar persona...")
+                    .style("width", "100%")
+                    .style("padding", "10px 15px")
+                    .style("border", "1px solid #ddd")
+                    .style("border-radius", "6px")
+                    .style("font-size", "14px")
+                    .style("box-sizing", "border-box")
+                    .style("transition", "border-color 0.3s ease")
+                    .on("focus", function () {
+                    d3.select(this).style("border-color", "#007BFF");
+                })
+                    .on("blur", function () {
+                    d3.select(this).style("border-color", "#ddd");
+                })
+                    .on("keyup", () => {
+                    this.actualizarArrayUsuarios();
+                });
             });
             const contenedorBotones = contSuperior.append("div")
                 .style("display", "flex")
@@ -184,8 +198,7 @@ var pantallaUsuarios;
                 d3.select(this).style("background-color", "#007BFF");
             })
                 .on("click", () => {
-                console.log("Botón de actualizar usuarios clickeado");
-                this.actualizarArrayUsuarios();
+                this.cargarUsuariosPU();
             });
             contenedorBotones.append("button")
                 .text("Agregar Persona")
@@ -204,32 +217,7 @@ var pantallaUsuarios;
                 .on("mouseout", function () {
                 d3.select(this).style("background-color", "#28a745");
             })
-                .on("click", () => this.viewForm.llamarFormulario(this.ventanaPadre, 0));
-            contSuperior.append("div")
-                .style("flex-grow", "1")
-                .style("margin-right", "20px")
-                .call(div => {
-                this.txtBusqueda = div.append("input")
-                    .attr("type", "text")
-                    .attr("id", "filtro-input")
-                    .attr("placeholder", "Buscar persona...")
-                    .style("width", "100%")
-                    .style("padding", "10px 15px")
-                    .style("border", "1px solid #ddd")
-                    .style("border-radius", "6px")
-                    .style("font-size", "14px")
-                    .style("box-sizing", "border-box")
-                    .style("transition", "border-color 0.3s ease")
-                    .on("focus", function () {
-                    d3.select(this).style("border-color", "#007BFF");
-                })
-                    .on("blur", function () {
-                    d3.select(this).style("border-color", "#ddd");
-                })
-                    .on("keyup", () => {
-                    this.actualizarArrayUsuarios();
-                });
-            });
+                .on("click", () => this.llamarFormularioUP(null));
         }
         crearTablaEncabezado() {
             this.contenedorTabla = this.ventanaPadre.append("div")
@@ -343,7 +331,7 @@ var pantallaUsuarios;
                     .style("height", "28px")
                     .style("font-size", "18px")
                     .style("cursor", "pointer")
-                    .on("click", (_, d) => this.viewForm.llamarFormulario(this.ventanaPadre, d.id));
+                    .on("click", (_, d) => this.llamarFormularioUP(d));
                 acciones.append("button")
                     .text("-")
                     .style("background-color", "#dc3545")

@@ -1,7 +1,10 @@
 namespace controller {
     export class formulario {
+        // Controladores
         private controllerForm = new controller.VentanaFormulario();
         private empresaData = new data.datoEmpresas();
+        private userData = new data.datoUsuarios();
+
         private contenidoFormulario: d3.Selection<HTMLDivElement, any, any, any>;
 
         // Campos de Texto
@@ -13,35 +16,65 @@ namespace controller {
         private txtCorreo: d3.Selection<HTMLInputElement, any, any, any>;
         private txtUserName: d3.Selection<HTMLInputElement, any, any, any>;
 
+        // Empresa
         private selectEmpresa: d3.Selection<HTMLSelectElement, any, any, any>;
+        private empresas: entidades.IEmpresa[] = [];
 
         private _UsuarioEdita: entidades.IPersona | null;
+        private respuesta: number = 0;
+        private _callback: ((resp: number) => void) | null = null;
 
-        private empresas: entidades.IEmpresa[] = this.empresaData.getEmpresas();
+        public asignarPadre(ventanaPadre: d3.Selection<HTMLDivElement, any, any, any>): void {
+            this.controllerForm.asignarPadre(ventanaPadre);
+        }
 
-        public llamarFormulario(ventanaPadre: d3.Selection<HTMLDivElement, any, any, any>, tipo: number): void {
-            this.controllerForm.formCreate()
+        public mostrarFormulario(persona: entidades.IPersona | null, callback: (resp: number) => void): void {
+            this._UsuarioEdita = persona;
+            this._callback = callback;
 
-            if (tipo > 0) {
-                // this.controllerForm.callbackView(ventanaPadre, tipo);
+            this.controllerForm.formAcces();
+
+            this.establecerTitulo(persona);
+
+            this.contenidoFormulario = this.controllerForm.obtenerContenido();
+            if (this.contenidoFormulario.selectAll("*").empty()) {
+                this.crearCamposFormulario();
+            }
+
+            if (persona) {
+                this.cargarDatosPersona(persona);
+            } else {
+                this.limpiarFormularioPersona();
+            }
+
+            this.cargarEmpresas();
+        }
+
+        private establecerTitulo(persona: entidades.IPersona | null): void {
+            if (!persona || persona.id === 0) {
                 this.controllerForm.cambiarTitulo("Crear Usuario");
-            }else{
-                // this.controllerForm.callbackView(ventanaPadre, tipo);
+            } else {
                 this.controllerForm.cambiarTitulo("Actualizar Usuario");
             }
         }
 
-        public PasarDatosUsuario(data: entidades.IPersona) {
+        private cargarEmpresas(): void {
 
+            this.empresaData.loaderEmpresasAPI((resp: number) => {
+                this.empresas = this.empresaData.getEmpresas();
+                this.llenarSelectEmpresas();
+            });
         }
 
-        public PasarDatosEmpresa(data: entidades.IEmpresa) {
-            this.llenarSelectEmpresas();
-        }
-
-        private consultarEmpresasAPI(): void {
-            this.empresaData.loaderEmpresasAPI();
-
+        private cargarDatosPersona(persona: entidades.IPersona): void {
+            this.txtNombre.property("value", persona.nombre);
+            this.txtAPaterno.property("value", persona.aPaterno);
+            this.txtAMaterno.property("value", persona.aMaterno);
+            this.txtTelefono.property("value", persona.telefono.toString());
+            this.txtFechaNacimiento.property("value", persona.fechaNacimiento.toISOString().split('T')[0]);
+            this.txtCorreo.property("value", persona.correo);
+            this.txtUserName.property("value", persona.nameTag);
+            this.selectEmpresa.property("value", persona.empresa.toString());
         }
 
         private crearCamposFormulario(): void {
@@ -215,9 +248,6 @@ namespace controller {
                 .attr("disabled", true)
                 .text("Seleccione una empresa...");
 
-            // Cargar empresas
-            // this.consultarEmpresasAPI();
-
             this.contenidoFormulario.append("button")
                 .text("Guardar")
                 .style("padding", "10px 20px")
@@ -242,23 +272,7 @@ namespace controller {
             const nameTag = this.txtUserName.property("value");
             const empresa = this.obtenerEmpresaSeleccionada();
 
-
-            if (!empresa)
-                return;
-
-
-            if (!nombre.trim()) {
-                this.txtNombre.node()?.focus();
-                return;
-            }
-
-            if (!aPaterno.trim())
-                return;
-
-
-            if (isNaN(telefono) || telefono <= 0)
-                return;
-
+            if (!empresa) return;
 
             const persona: entidades.IPersona = {
                 id: this._UsuarioEdita ? this._UsuarioEdita.id : 0,
@@ -273,17 +287,45 @@ namespace controller {
             };
 
             this.guardarPersonaAPI(persona);
-            // this.actualizarArrayUsuarios();
+        }
+
+
+        private crearPersonaPU(persona: entidades.IPersona): void {
+            this.userData.createUserAPI(persona, (resp: number) => {
+                if (resp > 0) {
+                    this.respuesta = resp;
+                    if (this._callback) {
+                        this._callback(resp);
+                    }
+                } else {
+                    this.respuesta = -300;
+                }
+            });
+        }
+
+        private actualizarPersonaPU(persona: entidades.IPersona): void {
+            this.userData.updateUserAPI(persona, (resp: number) => {
+                if (resp > 0) {
+                    this.respuesta = resp;
+                    if (this._callback) {
+                        this._callback(resp);
+                    }
+                } else {
+                    this.respuesta = -300;
+                }
+            });
         }
 
         private guardarPersonaAPI(persona: entidades.IPersona): void {
             const esNuevo = persona.id === 0;
 
             if (esNuevo) {
-                // this.userData.createUserAPI(persona);
+                this.crearPersonaPU(persona);
             } else {
-                // this.userData.updateUserAPI(persona);
+                this.actualizarPersonaPU(persona);
             }
+
+            this.controllerForm.cerrar();
         }
 
         private limpiarFormularioPersona(): void {
