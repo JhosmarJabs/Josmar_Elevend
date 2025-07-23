@@ -27,23 +27,11 @@ namespace pantallaUsuarios {
 
         // Area de Usuarios
         private cargarUsuariosPU(): void {
-            this.userData.loadUsersAPI();
-            this.actualizarArrayUsuarios();
+            this.userData.loadUsersAPI((resp: number) => {
+                if (resp > 0) this.actualizarArrayUsuarios();
+            });
         }
 
-        private CrearPersonaPU(persona: entidades.IPersona) {
-            this.userData.createUserAPI(persona);
-            // si la respuesta fue correcta que se ejecute esto () = > ()
-            this.userData.loadUsersAPI();
-            // this.CerrarFormulario();
-        }
-
-        private actualizarPersonaPU(persona: entidades.IPersona) {
-            this.userData.updateUserAPI(persona);
-            // si la respuesta fue correcta que se ejecute esto () = > ()
-            this.userData.loadUsersAPI();
-            // this.CerrarFormulario();
-        }
 
         private eliminarPersonaPU(user: entidades.IPersona) {
             this.controllerDelete.asignarPadre(this.ventanaPadre);
@@ -51,14 +39,22 @@ namespace pantallaUsuarios {
                 (confirmar: boolean) => {
                     if (confirmar) {
                         this.userData.deleteUserAPI(user.id);
-                        this.userData.loadUsersAPI();
-                        this.actualizarArrayUsuarios();
+                        this.cargarUsuariosPU();
                     }
                 });
         }
 
+        public llamarFormularioUP(persona: entidades.IPersona | null): void {
+            this.viewForm.asignarPadre(this.ventanaPadre);
+            this.viewForm.mostrarFormulario(persona,
+                () => {
+                    this.cargarUsuariosPU();
+                }
+            );
+
+        }
+
         private actualizarArrayUsuarios(_columna: number = -1): void {
-            // this.userData.loadUsersAPI();
             var usuariosVisibles: Array<entidades.IPersona> = Array.from(this.userData.getUsersArray());
 
             const busqueda = String(this.txtBusqueda.property("value")).toLowerCase();
@@ -183,7 +179,26 @@ namespace pantallaUsuarios {
                 .style("flex-grow", "1")
                 .style("margin-right", "20px")
                 .call(div => {
-
+                    this.txtBusqueda = div.append("input")
+                        .attr("type", "text")
+                        .attr("id", "filtro-input")
+                        .attr("placeholder", "Buscar persona...")
+                        .style("width", "100%")
+                        .style("padding", "10px 15px")
+                        .style("border", "1px solid #ddd")
+                        .style("border-radius", "6px")
+                        .style("font-size", "14px")
+                        .style("box-sizing", "border-box")
+                        .style("transition", "border-color 0.3s ease")
+                        .on("focus", function () {
+                            d3.select(this).style("border-color", "#007BFF");
+                        })
+                        .on("blur", function () {
+                            d3.select(this).style("border-color", "#ddd");
+                        })
+                        .on("keyup", () => {
+                            this.actualizarArrayUsuarios();
+                        });
                 });
 
             const contenedorBotones = contSuperior.append("div")
@@ -217,8 +232,7 @@ namespace pantallaUsuarios {
                     d3.select(this).style("background-color", "#007BFF");
                 })
                 .on("click", () => {
-                    console.log("Botón de actualizar usuarios clickeado");
-                    this.actualizarArrayUsuarios();
+                    this.cargarUsuariosPU();
                 });
 
             contenedorBotones.append("button")
@@ -238,33 +252,8 @@ namespace pantallaUsuarios {
                 .on("mouseout", function () {
                     d3.select(this).style("background-color", "#28a745");
                 })
-                .on("click", () => this.viewForm.llamarFormulario(this.ventanaPadre, 0));
+                .on("click", () => this.llamarFormularioUP(null));
 
-            contSuperior.append("div")
-                .style("flex-grow", "1")
-                .style("margin-right", "20px")
-                .call(div => {
-                    this.txtBusqueda = div.append("input")
-                        .attr("type", "text")
-                        .attr("id", "filtro-input")
-                        .attr("placeholder", "Buscar persona...")
-                        .style("width", "100%")
-                        .style("padding", "10px 15px")
-                        .style("border", "1px solid #ddd")
-                        .style("border-radius", "6px")
-                        .style("font-size", "14px")
-                        .style("box-sizing", "border-box")
-                        .style("transition", "border-color 0.3s ease")
-                        .on("focus", function () {
-                            d3.select(this).style("border-color", "#007BFF");
-                        })
-                        .on("blur", function () {
-                            d3.select(this).style("border-color", "#ddd");
-                        })
-                        .on("keyup", () => {
-                            this.actualizarArrayUsuarios();
-                        });
-                });
         }
 
         private crearTablaEncabezado(): void {
@@ -392,7 +381,7 @@ namespace pantallaUsuarios {
                             .style("height", "28px")
                             .style("font-size", "18px")
                             .style("cursor", "pointer")
-                            .on("click", (_, d: entidades.IPersona) => this.viewForm.llamarFormulario(this.ventanaPadre, d.id));
+                            .on("click", (_, d: entidades.IPersona) => this.llamarFormularioUP(d));
 
                         acciones.append("button")
                             .text("-")
