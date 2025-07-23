@@ -16,7 +16,7 @@ namespace Data {
         private DELETE_ERROR = 40;
 
 
-        public analizaRespuesta(backendResult: any, type: number): number {
+        public analizaRespuesta(backendResult: number, type: number): number {
             let _resp = 0;
             switch (type) {
                 case 1:// Obtener
@@ -36,10 +36,9 @@ namespace Data {
             return _resp;
         }
 
-        public mapLoadResponse(backendResult: any): number {
-            if (Array.isArray(backendResult)) {
-                return backendResult.length > 0 ? this.LOAD_SUCCESS : this.LOAD_NO_DATA;
-            }
+        public mapLoadResponse(backendResult: number): number {
+            if (backendResult > 0) return this.LOAD_SUCCESS;
+            if (backendResult === 0) return this.LOAD_NO_DATA;
             return this.LOAD_ERROR;
         }
 

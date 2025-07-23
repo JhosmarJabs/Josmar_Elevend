@@ -4,6 +4,7 @@ namespace controller {
         private capaBloqueo: d3.Selection<HTMLDivElement, any, any, any>;
         private ventana: d3.Selection<HTMLDivElement, any, any, any>;
         private VentanaCreado: boolean = false;
+        
         private onConfirmarCallback: ((confirma: boolean) => void) | null = null;
 
         public asignarPadre(ventanaPadre: d3.Selection<HTMLDivElement, any, any, any>): void {

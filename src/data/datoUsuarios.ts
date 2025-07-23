@@ -5,29 +5,32 @@ namespace data {
         // private _alert = new controller.Notificacion();
         public usuariosMapeados: Map<number, entidades.IPersona> = new Map();
         private ultimaFechaModificacion: string = '';
-        private finalizado: (() => void) | null = null;
-
-        /*         public establecerAlActualizarDatos(callback: () => void): void {
-                    this.alActualizarDatos = callback;
-                } */
 
 
         // Public
-        public loadUsersAPI(): Number {
-            return this.cargarUsuarios((resp: number) => {});
-            // return 1;
+        public loadUsersAPI(callback?: (resp: number) => void): void {
+            this.cargarUsuarios((resp: number) => {
+                if (callback) callback(resp);
+            });
         }
 
-        public createUserAPI(persona: entidades.IPersona): void {
-            this.crearPersona(persona);
+        public createUserAPI(persona: entidades.IPersona, callback?: (resp: number) => void): void {
+            this.crearPersona(persona), (resp: number) => {
+                if (callback) callback(resp);
+            };
         }
 
-        public updateUserAPI(persona: entidades.IPersona): void {
-            this.actualizarPersona(persona);
+        public updateUserAPI(persona: entidades.IPersona, callback?: (resp: number) => void): void {
+            this.actualizarPersona(persona, (resp: number) => {
+                if (callback) callback(resp);
+            });
         }
 
-        public deleteUserAPI(id: number): void {
-            this.eliminarPersona(id);
+
+        public deleteUserAPI(id: number, callback?: (resp: number) => void): void {
+            this.eliminarPersona(id, (resp: number) => {
+                if (callback) callback(resp);
+            });
         }
 
         public getUsersArray(): entidades.IPersona[] {
@@ -38,21 +41,8 @@ namespace data {
             return this.usuariosMapeados.get(id);
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // private
-        private cargarUsuarios(callback: (resp: number) => void): number {
+        // Private
+        private cargarUsuarios(callback: (resp: number) => void): void {
             let resp: number;
 
             const url = config.ApiConfig.API_PERSONAS;
@@ -87,24 +77,26 @@ namespace data {
                         };
 
                         this.usuariosMapeados.set(persona.id, persona);
-                        if(element.fModificacion > this.ultimaFechaModificacion){
+                        if (element.fModificacion > this.ultimaFechaModificacion) {
                             this.ultimaFechaModificacion = element.fModificacion;
                         }
                     }
 
                     resp = this._error.analizaRespuesta(data.length, 1);
 
-                    callback(resp);
+                    if (callback)
+                        callback(resp);
                 })
                 .catch(error => {
                     console.error('Error al cargar usuarios:', error);
-                    callback(null);
+                    if (callback) {
+                        callback(-100);
+                    }
                 });
-
-            return resp;
         }
 
-        private crearPersona(persona: entidades.IPersona): void {
+        private crearPersona(persona: entidades.IPersona, callback?: (resp: number, nuevoId?: number) => void): void {
+            let resp: number;
             fetch(config.ApiConfig.API_CREATE_PERSONA, {
                 method: "POST",
                 headers: {
@@ -126,19 +118,24 @@ namespace data {
                 .then(response => response.json())
                 .then(data => {
                     console.log('Persona creada:', data);
-                    this._error.analizaRespuesta(data, 2);
 
-                    if (this.finalizado) {
-                        this.finalizado();
-                    }
-                    this.loadUsersAPI();
+                    this.usuariosMapeados.set(persona.id, persona);
+
+                    resp = this._error.analizaRespuesta(data.length, 2);
+                    if (callback)
+                        callback(resp);
+
                 })
                 .catch(error => {
                     console.error("Error al crear persona:", error);
+                    if (callback) {
+                        callback(-200);
+                    }
                 });
         }
 
-        private actualizarPersona(persona: entidades.IPersona): void {
+        private actualizarPersona(persona: entidades.IPersona, callback?: (resp: number) => void): void {
+            let resp: number;
             fetch(config.ApiConfig.API_UPDATE_PERSONA, {
                 method: "POST",
                 headers: {
@@ -161,17 +158,19 @@ namespace data {
                 .then(data => {
                     console.log('Persona actualizada:', data);
                     this._error.analizaRespuesta(data, 3);
-                    if (this.finalizado) {
-                        this.finalizado();
-                    }
-                    this.loadUsersAPI();
+
+                    resp = this._error.analizaRespuesta(data, 3);
+
+                    if (callback)
+                        callback(resp);
+
                 })
                 .catch(error => {
                     console.error("Error al actualizar persona:", error);
                 });
         }
 
-        private eliminarPersona(id: number): number {
+        private eliminarPersona(id: number, callback?: (resp: number) => void): number {
             let resp: number;
             const url = config.ApiConfig.API_DELETE_PERSONA;
 
@@ -189,13 +188,13 @@ namespace data {
                     return response.json();
                 })
                 .then(data => {
-                    // callback
-                    console.log("Persona eliminada correctamente:", data);
+
+                    console.log("Persona eliminada:", data);
                     resp = this._error.analizaRespuesta(data, 4);
                     this.usuariosMapeados.delete(id);
 
-                    if (this.finalizado) {
-                        this.finalizado();
+                    if (callback) {
+                        callback(resp);
                     }
                 })
                 .catch(error => {

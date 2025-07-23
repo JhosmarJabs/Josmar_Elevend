@@ -3,7 +3,6 @@ namespace controller {
         private ventana: d3.Selection<HTMLDivElement, any, any, any>;
         private esVisible: boolean = false;
 
-
         public asignarPadre(titulo: string, ventanaPadre: d3.Selection<HTMLDivElement, any, any, any>): d3.Selection<HTMLDivElement, any, any, any> {
             this.ventana = ventanaPadre
             this.diseñoVentana(titulo);
@@ -25,7 +24,6 @@ namespace controller {
             this.ventana.append("h3")
                 .text(titulo)
                 .style("margin-top", "0");
-
 
             this.ventana.append("button")
                 .text("X")
