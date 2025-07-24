@@ -3,31 +3,27 @@ namespace controller {
         private container: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
         private alerts: Map<string, any> = new Map();
 
-        constructor() {
+        constructor(notificacion: entidades.iNotificacion) {
             this.inicializarContenedor();
+            this.mostrar(notificacion);
         }
 
         private inicializarContenedor(): void {
-            let contenedor = d3.select('.alert-container');
-
-            if (contenedor.empty()) {
-                contenedor = d3.select('body')
-                    .append('div')
-                    .attr('class', 'alert-container');
-            }
-
-            this.container = contenedor as d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
+            this.container = d3.select('body')
+                .append('div')
+                .attr('class', 'alert-container')
+                .style('position', 'fixed')
+                .style('top', '20px')
+                .style('right', '20px')
+                .style('z-index', '9999')
+                .style('pointer-events', 'none')
+                .style('max-width', '400px')
+                .style('width', 'auto');
         }
 
-        public note(padre: d3.Selection<SVGElement, unknown, HTMLElement, any>, notificacion: entidades.iNotificacion): string {
-            
-            this.show(notificacion);
-            return "alert";
-        } 
-
-        private show(not : entidades.iNotificacion): string {
-            let duration = 5000;
-            const alertId = 'alert_' + Math.floor(Math.random() * 1000);
+        public mostrar(notificacion: entidades.iNotificacion): string {
+            const duration = 5000;
+            const alertId = 'alert_' + Math.floor(Math.random() * 1000000);
 
             const icons = {
                 success: '✓',
@@ -37,25 +33,26 @@ namespace controller {
             };
 
             const colors = {
-                success: { bg: '#28a745', border: '#28a745', text: '#155724' },
-                error: { bg: '#dc3545', border: '#dc3545', text: '#721c24' },
-                warning: { bg: '#ffc107', border: '#ffc107', text: '#856404' },
-                info: { bg: '#17a2b8', border: '#17a2b8', text: '#0c5460' }
+                success: { bg: '#28a745', border: '#28a745' },
+                error: { bg: '#dc3545', border: '#dc3545' },
+                warning: { bg: '#ffc107', border: '#ffc107' },
+                info: { bg: '#17a2b8', border: '#17a2b8' }
             };
 
             const alertElement = this.container
                 .append('div')
-                .attr('class', `floating-alert ${not.type}`)
+                .attr('class', `floating-alert ${notificacion.type}`)
                 .attr('id', alertId)
                 .style('background', 'white')
                 .style('border-radius', '8px')
                 .style('box-shadow', '0 4px 12px rgba(0, 0, 0, 0.15)')
                 .style('margin-bottom', '10px')
                 .style('overflow', 'hidden')
-                .style('border-left', `4px solid ${colors[not.type].border}`)
+                .style('border-left', `4px solid ${colors[notificacion.type].border}`)
                 .style('position', 'relative')
                 .style('max-width', '400px')
                 .style('width', '100%')
+                .style('pointer-events', 'auto')
                 .style('transform', 'translateX(450px)')
                 .style('opacity', 0);
 
@@ -76,13 +73,13 @@ namespace controller {
                 .style('display', 'flex')
                 .style('align-items', 'center')
                 .style('justify-content', 'center')
-                .style('color', not.type === 'warning' ? '#333' : 'white')
+                .style('color', notificacion.type === 'warning' ? '#333' : 'white')
                 .style('font-size', '12px')
                 .style('font-weight', 'bold')
                 .style('flex-shrink', '0')
                 .style('margin-top', '2px')
-                .style('background-color', colors[not.type].bg)
-                .text(icons[not.type]);
+                .style('background-color', colors[notificacion.type].bg)
+                .text(icons[notificacion.type]);
 
             const textContainer = alertContent
                 .append('div')
@@ -96,7 +93,7 @@ namespace controller {
                 .style('font-size', '14px')
                 .style('margin-bottom', '4px')
                 .style('color', '#333')
-                .text(not.title);
+                .text(notificacion.title);
 
             textContainer
                 .append('div')
@@ -104,7 +101,7 @@ namespace controller {
                 .style('font-size', '13px')
                 .style('color', '#666')
                 .style('line-height', '1.4')
-                .text(not.message);
+                .text(notificacion.message);
 
             alertContent
                 .append('button')
@@ -135,7 +132,7 @@ namespace controller {
                         .style('color', '#999');
                 })
                 .on('click', () => {
-                    this.close(alertId);
+                    this.cerrar(alertId);
                 });
 
             const progressBar = alertElement
@@ -145,7 +142,7 @@ namespace controller {
                 .style('bottom', '0')
                 .style('left', '0')
                 .style('height', '3px')
-                .style('background-color', colors[not.type].bg)
+                .style('background-color', colors[notificacion.type].bg)
                 .style('width', '100%')
                 .style('transform-origin', 'left')
                 .style('z-index', '10')
@@ -165,25 +162,25 @@ namespace controller {
                 .ease(d3.easeLinear)
                 .style('transform', 'scaleX(0)');
 
-            const timeoutId = setTimeout(() => {
-                this.close(alertId);
+            const timer = setTimeout(() => {
+                this.cerrar(alertId);
             }, duration);
 
             this.alerts.set(alertId, {
                 element: alertElement,
-                timeoutId: timeoutId
+                timer: timer
             });
 
             return alertId;
         }
 
-        public close(alertId: string): void {
+        public cerrar(alertId: string): void {
             const alertData = this.alerts.get(alertId);
             if (!alertData) return;
 
-            const { element, timeoutId } = alertData;
+            const { element, timer } = alertData;
 
-            clearTimeout(timeoutId);
+            clearTimeout(timer);
 
             element
                 .transition()
@@ -196,27 +193,5 @@ namespace controller {
                     this.alerts.delete(alertId);
                 });
         }
-
-        public closeAll(): void {
-            this.alerts.forEach((alertData, alertId) => {
-                this.close(alertId);
-            });
-        }
-
-/*         public success(title: string, message: string): string {
-            return this.show('success', title, message);
-        }
-
-        public error(title: string, message: string): string {
-            return this.show('error', title, message);
-        }
-
-        public warning(title: string, message: string): string {
-            return this.show('warning', title, message);
-        }
-
-        public info(title: string, message: string): string {
-            return this.show('info', title, message);
-        } */
     }
 }

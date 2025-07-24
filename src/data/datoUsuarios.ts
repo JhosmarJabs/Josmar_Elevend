@@ -1,67 +1,22 @@
 namespace data {
-
     export class datoUsuarios {
-        private _error = new Data.ErrorData();
-        // private _alert = new controller.Notificacion();
+        private _respuesta = new Data.Respuesta();
         public usuariosMapeados: Map<number, entidades.IPersona> = new Map();
         private ultimaFechaModificacion: string = '';
-
-
-        // Public
-        public loadUsersAPI(callback?: (resp: number) => void): void {
-            this.cargarUsuarios((resp: number) => {
-                if (callback) callback(resp);
-            });
-        }
-
-        public createUserAPI(persona: entidades.IPersona, callback?: (resp: number) => void): void {
-            this.crearPersona(persona), (resp: number) => {
-                if (callback) callback(resp);
-            };
-        }
-
-        public updateUserAPI(persona: entidades.IPersona, callback?: (resp: number) => void): void {
-            this.actualizarPersona(persona, (resp: number) => {
-                if (callback) callback(resp);
-            });
-        }
-
-
-        public deleteUserAPI(id: number, callback?: (resp: number) => void): void {
-            this.eliminarPersona(id, (resp: number) => {
-                if (callback) callback(resp);
-            });
-        }
-
-        public getUsersArray(): entidades.IPersona[] {
-            return Array.from(this.usuariosMapeados.values());
-        }
-
-        public getUserById(id: number): entidades.IPersona {
-            return this.usuariosMapeados.get(id);
-        }
-
-        // Private
-        private cargarUsuarios(callback: (resp: number) => void): void {
-            let resp: number;
-
+    
+        public loadUsersAPI(callback: (success: boolean) => void): void {
             const url = config.ApiConfig.API_PERSONAS;
-
             const requestBody = this.ultimaFechaModificacion
                 ? { FModificacion: this.ultimaFechaModificacion }
                 : {};
 
             fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
             })
                 .then(response => response.json())
                 .then(data => {
-
-                    console.log(data, this.ultimaFechaModificacion);
                     for (let i = 0; i < data.length; i++) {
                         const element = data[i];
                         const persona: entidades.IPersona = {
@@ -77,31 +32,25 @@ namespace data {
                         };
 
                         this.usuariosMapeados.set(persona.id, persona);
-                        if (element.fModificacion > this.ultimaFechaModificacion) {
+                        if (element.fModificacion > this.ultimaFechaModificacion)
                             this.ultimaFechaModificacion = element.fModificacion;
-                        }
                     }
+                    this._respuesta.analizaRespuesta(data.length, 1);
+                    const success = data.length >= 0;
 
-                    resp = this._error.analizaRespuesta(data.length, 1);
-
-                    if (callback)
-                        callback(resp);
+                    callback(success);
                 })
                 .catch(error => {
                     console.error('Error al cargar usuarios:', error);
-                    if (callback) {
-                        callback(-100);
-                    }
+                    this._respuesta.analizaRespuesta(-300, 1);
+                    callback(false);
                 });
         }
 
-        private crearPersona(persona: entidades.IPersona, callback?: (resp: number, nuevoId?: number) => void): void {
-            let resp: number;
+        public createUserAPI(persona: entidades.IPersona, callback: (success: boolean) => void): void {
             fetch(config.ApiConfig.API_CREATE_PERSONA, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: 0,
                     nombre: persona.nombre,
@@ -117,30 +66,26 @@ namespace data {
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Persona creada:', data);
+                    this._respuesta.analizaRespuesta(data, 2);
+                    const success = data > 0;
 
+                    if (success)
+                        persona.id = data;
                     this.usuariosMapeados.set(persona.id, persona);
 
-                    resp = this._error.analizaRespuesta(data.length, 2);
-                    if (callback)
-                        callback(resp);
-
+                    callback(success);
                 })
                 .catch(error => {
                     console.error("Error al crear persona:", error);
-                    if (callback) {
-                        callback(-200);
-                    }
+                    this._respuesta.analizaRespuesta(-300, 2);
+                    callback(false);
                 });
         }
 
-        private actualizarPersona(persona: entidades.IPersona, callback?: (resp: number) => void): void {
-            let resp: number;
+        public updateUserAPI(persona: entidades.IPersona, callback: (success: boolean) => void): void {
             fetch(config.ApiConfig.API_UPDATE_PERSONA, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: persona.id,
                     nombre: persona.nombre,
@@ -156,54 +101,58 @@ namespace data {
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Persona actualizada:', data);
-                    this._error.analizaRespuesta(data, 3);
+                    this._respuesta.analizaRespuesta(data, 3);
+                    const success = data > 0;
 
-                    resp = this._error.analizaRespuesta(data, 3);
+                    if (success)
+                        this.usuariosMapeados.set(persona.id, persona);
 
-                    if (callback)
-                        callback(resp);
-
+                    callback(success);
                 })
                 .catch(error => {
                     console.error("Error al actualizar persona:", error);
+                    this._respuesta.analizaRespuesta(-300, 3);
+                    callback(false);
                 });
         }
 
-        private eliminarPersona(id: number, callback?: (resp: number) => void): number {
-            let resp: number;
-            const url = config.ApiConfig.API_DELETE_PERSONA;
-
-            fetch(url, {
+        public deleteUserAPI(id: number, callback?: (success: boolean) => void): void {
+            fetch(config.ApiConfig.API_DELETE_PERSONA, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(id)
             })
                 .then(response => {
-                    if (!response.ok) {
+                    if (!response.ok)
                         throw new Error(`Error HTTP: ${response.status}`);
-                    }
+
                     return response.json();
                 })
                 .then(data => {
+                    this._respuesta.analizaRespuesta(data, 4);
 
-                    console.log("Persona eliminada:", data);
-                    resp = this._error.analizaRespuesta(data, 4);
-                    this.usuariosMapeados.delete(id);
+                    const success: boolean = data > 0;
 
-                    if (callback) {
-                        callback(resp);
+                    if (success) {
+                        this.usuariosMapeados.delete(id);
                     }
+
+                    callback?.(success);
                 })
                 .catch(error => {
                     console.error("Error al eliminar persona:", error);
-                });
+                    this._respuesta.analizaRespuesta(-1, 4);
 
-            return resp;
+                    callback?.(false);
+                });
         }
 
-    }
+        public getUsersArray(): entidades.IPersona[] {
+            return Array.from(this.usuariosMapeados.values());
+        }
 
+        public getUserById(id: number): entidades.IPersona {
+            return this.usuariosMapeados.get(id);
+        }
+    }
 }
