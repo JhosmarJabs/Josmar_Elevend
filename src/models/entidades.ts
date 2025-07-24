@@ -6,6 +6,13 @@ namespace entidades {
         Telefono = 4,
         Fecha = 5,
     }
+
+    export enum eNotificacion {
+        Success = "success",
+        Error = "error",
+        Warning = "warning",
+        Info = "info"
+    }
     
     export interface IEmpresa {
         id: number;
@@ -29,7 +36,7 @@ namespace entidades {
     }
 
     export interface iNotificacion {
-        type: string,
+        type: eNotificacion,
         title: string,
         message: string
     }
