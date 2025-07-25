@@ -1,4 +1,4 @@
-namespace svgCirculos {
+namespace view {
     interface ICirculos {
         id: number;
         x: number;

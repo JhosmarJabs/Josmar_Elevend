@@ -22,7 +22,7 @@ namespace controller {
 
         private _UsuarioEdita: entidades.IPersona | null;
         private respuesta: any;
-        private _callback: ((resp: number) => void) | null = null;
+        private confirmacionCallback: ((confirma: boolean) => void) | null = null;
 
         private ventana: d3.Selection<HTMLDivElement, any, any, any>;
 
@@ -30,9 +30,8 @@ namespace controller {
             this.ventana = ventanaPadre;
         }
 
-        public mostrarFormulario(persona: entidades.IPersona | null, callback: (resp: number) => void): void {
+        public mostrarFormulario(persona: entidades.IPersona | null, callback: (confirmar: boolean) => void): void {
             this._UsuarioEdita = persona;
-            this._callback = callback;
             this.establecerTitulo(persona);
 
             if (!this.contenidoFormulario || this.contenidoFormulario.selectAll("*").empty())
@@ -45,19 +44,21 @@ namespace controller {
 
             this.cargarEmpresas();
 
+            this.confirmacionCallback = callback;
             this.windowController.mostrar();
         }
 
         private establecerTitulo(persona: entidades.IPersona | null): void {
             let titulo: string = "";
-            if (!persona || persona.id === 0) 
+            if (!persona || persona.id === 0)
                 titulo = "Crear Usuario";
-            else 
+            else
                 titulo = "Actualizar Usuario";
-            
-            this.contenidoFormulario = this.windowController.createModal(titulo, this.ventana);
-        }
 
+            this.contenidoFormulario = this.windowController.createModal(titulo, this.ventana, () => {
+                this.responder(false);
+            });
+        }
 
         private cargarEmpresas(): void {
             this.empresaData.loaderEmpresasAPI((resp: number) => {
@@ -248,7 +249,13 @@ namespace controller {
                 .attr("disabled", true)
                 .text("Seleccione una empresa...");
 
-            this.contenidoFormulario.append("button")
+            const contenedorBotones = this.contenidoFormulario.append("div")
+                .style("display", "flex")
+                .style("gap", "10px")
+                .style("justify-content", "flex-end")
+                .style("margin-top", "20px");
+
+            contenedorBotones.append("button")
                 .text("Guardar")
                 .style("padding", "10px 20px")
                 .style("background-color", "#007BFF")
@@ -256,13 +263,19 @@ namespace controller {
                 .style("border", "none")
                 .style("border-radius", "4px")
                 .style("cursor", "pointer")
-                .style("margin-top", "10px")
+                .style("transition", "background-color 0.3s")
+                .on("mouseover", function () {
+                    d3.select(this).style("background-color", "#0056b3");
+                })
+                .on("mouseout", function () {
+                    d3.select(this).style("background-color", "#007BFF");
+                })
                 .on("click", () => {
-                    this.GuardarFormulario();
+                    this.guardarFormulario();
                 });
         }
 
-        private GuardarFormulario(): void {
+        private guardarFormulario(): void {
             const nombre = this.txtNombre.property("value");
             const aPaterno = this.txtAPaterno.property("value");
             const aMaterno = this.txtAMaterno.property("value");
@@ -292,19 +305,27 @@ namespace controller {
             this.guardarPersonaAPI(persona);
         }
 
-
         private guardarPersonaAPI(persona: entidades.IPersona): void {
             const esNuevo = persona.id === 0;
 
-            if (esNuevo) 
-                this.userData.createUserAPI(persona, resp => this.respuesta = resp);
-            else 
-                this.userData.updateUserAPI(persona, resp => this.respuesta = resp);
+            if (esNuevo) {
+                this.userData.createUserAPI(persona, (resp) => {
+                    console.log("Persona creada:", resp);
+                    this.responder(true);
+                });
+            } else {
+                this.userData.updateUserAPI(persona, (resp) => {
+                    console.log("Persona actualizada:", resp);
+                    this.responder(true);
+                });
+            }
+        }
 
+        private responder(confirma: boolean): void {
             this.windowController.cerrar();
 
-            if (this._callback) 
-                this._callback(this.respuesta);
+            if (this.confirmacionCallback)
+                this.confirmacionCallback(confirma);
         }
 
         private limpiarFormularioPersona(): void {
@@ -333,9 +354,6 @@ namespace controller {
                 .attr("class", "empresa-option")
                 .attr("value", d => d.id.toString())
                 .text(d => d.nombre);
-        }
-        public cerrarFormulario(): void {
-            this.windowController.cerrar();
         }
     }
 }

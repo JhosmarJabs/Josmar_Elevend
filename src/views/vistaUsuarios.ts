@@ -1,5 +1,5 @@
-namespace pantallaUsuarios {
-    export class pantallaUsuarios {
+namespace view {
+    export class vistaUsuarios {
         // Acceso a controles
         private userData = new data.datoUsuarios();
         private viewForm = new controller.formulario();
@@ -46,8 +46,9 @@ namespace pantallaUsuarios {
         public llamarFormularioUP(persona: entidades.IPersona | null): void {
             this.viewForm.asignarPadre(this.ventanaPadre);
             this.viewForm.mostrarFormulario(persona,
-                () => {
-                    this.cargarUsuariosPU();
+                (confirmar: boolean) => {
+                    if (confirmar)
+                        this.cargarUsuariosPU();
                 }
             );
         }

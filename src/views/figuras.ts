@@ -1,4 +1,4 @@
-namespace figuras {
+namespace view {
   export class figuras {
     private ventanaActiva: boolean = false;
     private vistaVentana: d3.Selection<HTMLDivElement, any, any, any>;

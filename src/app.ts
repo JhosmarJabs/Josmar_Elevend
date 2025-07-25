@@ -1,8 +1,8 @@
   namespace app {
     export class main {
-      private _figuras: figuras.figuras;
-      private _usuarios: pantallaUsuarios.pantallaUsuarios;
-      private _circulos: svgCirculos.svgCirculos;
+      private _figuras: view.figuras;
+      private _usuarios: view.vistaUsuarios;
+      private _circulos: view.svgCirculos;
 
       constructor() {
         d3.select<HTMLBodyElement, unknown>("body")
@@ -11,7 +11,7 @@
           .style("margin-right", "10px")
           .on("click", (): void => {
             if (!this._figuras) {
-              this._figuras = new figuras.figuras();
+              this._figuras = new view.figuras();
             }
             this._figuras.ventanaVisible();
           });
@@ -22,7 +22,7 @@
           .style("margin-right", "10px")
           .on("click", (): void => {
             if (!this._usuarios) {
-              this._usuarios = new pantallaUsuarios.pantallaUsuarios();
+              this._usuarios = new view.vistaUsuarios();
             }
             this._usuarios.verPantalla();
           });
@@ -33,7 +33,7 @@
           .text("Circulo")
           .on("click", (): void => {
             if (!this._circulos) {
-              this._circulos = new svgCirculos.svgCirculos();
+              this._circulos = new view.svgCirculos();
             }
             this._circulos.abrirPantallaCirculos();
           });

@@ -17,7 +17,7 @@ namespace controller {
             return this.ventana;
         }
 
-        public createModal(titulo: string, ventanaPadre: d3.Selection<HTMLDivElement, any, any, any>): d3.Selection<HTMLDivElement, any, any, any> {
+        public createModal(titulo: string, ventanaPadre: d3.Selection<HTMLDivElement, any, any, any>, callback: () => void): d3.Selection<HTMLDivElement, any, any, any> {
             this.esModal = true;
             this.ventana = ventanaPadre;
             this.tituloActual = titulo;

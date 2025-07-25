@@ -8,7 +8,7 @@ var app;
                 .style("margin-right", "10px")
                 .on("click", () => {
                 if (!this._figuras) {
-                    this._figuras = new figuras.figuras();
+                    this._figuras = new view.figuras();
                 }
                 this._figuras.ventanaVisible();
             });
@@ -18,7 +18,7 @@ var app;
                 .style("margin-right", "10px")
                 .on("click", () => {
                 if (!this._usuarios) {
-                    this._usuarios = new pantallaUsuarios.pantallaUsuarios();
+                    this._usuarios = new view.vistaUsuarios();
                 }
                 this._usuarios.verPantalla();
             });
@@ -28,7 +28,7 @@ var app;
                 .text("Circulo")
                 .on("click", () => {
                 if (!this._circulos) {
-                    this._circulos = new svgCirculos.svgCirculos();
+                    this._circulos = new view.svgCirculos();
                 }
                 this._circulos.abrirPantallaCirculos();
             });
