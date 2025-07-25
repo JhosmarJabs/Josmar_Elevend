@@ -3,7 +3,7 @@ namespace data {
         private _respuesta = new Data.Respuesta();
         public usuariosMapeados: Map<number, entidades.IPersona> = new Map();
         private ultimaFechaModificacion: string = '';
-    
+
         public loadUsersAPI(callback: (success: boolean) => void): void {
             const url = config.ApiConfig.API_PERSONAS;
             const requestBody = this.ultimaFechaModificacion
@@ -71,7 +71,9 @@ namespace data {
 
                     if (success)
                         persona.id = data;
+
                     this.usuariosMapeados.set(persona.id, persona);
+                    console.log("Usuario creado:", persona, this.usuariosMapeados);
 
                     callback(success);
                 })
@@ -106,6 +108,9 @@ namespace data {
 
                     if (success)
                         this.usuariosMapeados.set(persona.id, persona);
+
+                    console.log("Usuario actualizado:", persona, this.usuariosMapeados);
+
 
                     callback(success);
                 })

@@ -23,12 +23,14 @@ namespace view {
             this.crearVentanaPrincipal();
             this.crearTablaEncabezado();
             this.cargarUsuariosPU();
+            this.viewForm.asignarUserData(this.userData);
         }
 
         // Area de Usuarios
         private cargarUsuariosPU(): void {
             this.userData.loadUsersAPI((resp: any) => {
                 if (resp > 0) this.actualizarArrayUsuarios();
+                console.log(this.userData.getUsersArray(), "Usuarios Cargados");
             });
         }
 
@@ -44,11 +46,16 @@ namespace view {
         }
 
         public llamarFormularioUP(persona: entidades.IPersona | null): void {
+            console.log(this.userData.getUsersArray(), "Llamar Formulario");
+
             this.viewForm.asignarPadre(this.ventanaPadre);
             this.viewForm.mostrarFormulario(persona,
                 (confirmar: boolean) => {
-                    if (confirmar)
-                        this.cargarUsuariosPU();
+                    if (confirmar) {
+                        console.log(this.userData.getUsersArray(), "Formulario Cerrado");
+                        // this.cargarUsuariosPU();
+                        this.actualizarArrayUsuarios();
+                    }
                 }
             );
         }

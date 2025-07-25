@@ -2,7 +2,7 @@ namespace controller {
     export class formulario {
         // Controladores
         private empresaData = new data.datoEmpresas();
-        private userData = new data.datoUsuarios();
+        private userData: data.datoUsuarios;
         private windowController = new controller.ventana();
 
         private contenidoFormulario: d3.Selection<HTMLDivElement, any, any, any>;
@@ -21,7 +21,6 @@ namespace controller {
         private empresas: entidades.IEmpresa[] = [];
 
         private _UsuarioEdita: entidades.IPersona | null;
-        private respuesta: any;
         private confirmacionCallback: ((confirma: boolean) => void) | null = null;
 
         private ventana: d3.Selection<HTMLDivElement, any, any, any>;
@@ -58,24 +57,6 @@ namespace controller {
             this.contenidoFormulario = this.windowController.createModal(titulo, this.ventana, () => {
                 this.responder(false);
             });
-        }
-
-        private cargarEmpresas(): void {
-            this.empresaData.loaderEmpresasAPI((resp: number) => {
-                this.empresas = this.empresaData.getEmpresas();
-                this.llenarSelectEmpresas();
-            });
-        }
-
-        private cargarDatosPersona(persona: entidades.IPersona): void {
-            this.txtNombre.property("value", persona.nombre);
-            this.txtAPaterno.property("value", persona.aPaterno);
-            this.txtAMaterno.property("value", persona.aMaterno);
-            this.txtTelefono.property("value", persona.telefono.toString());
-            this.txtFechaNacimiento.property("value", persona.fechaNacimiento.toISOString().split('T')[0]);
-            this.txtCorreo.property("value", persona.correo);
-            this.txtUserName.property("value", persona.nameTag);
-            this.selectEmpresa.property("value", persona.empresa.toString());
         }
 
         private crearCamposFormulario(): void {
@@ -275,6 +256,17 @@ namespace controller {
                 });
         }
 
+        private cargarDatosPersona(persona: entidades.IPersona): void {
+            this.txtNombre.property("value", persona.nombre);
+            this.txtAPaterno.property("value", persona.aPaterno);
+            this.txtAMaterno.property("value", persona.aMaterno);
+            this.txtTelefono.property("value", persona.telefono.toString());
+            this.txtFechaNacimiento.property("value", persona.fechaNacimiento.toISOString().split('T')[0]);
+            this.txtCorreo.property("value", persona.correo);
+            this.txtUserName.property("value", persona.nameTag);
+            this.selectEmpresa.property("value", persona.empresa.toString());
+        }
+
         private guardarFormulario(): void {
             const nombre = this.txtNombre.property("value");
             const aPaterno = this.txtAPaterno.property("value");
@@ -301,22 +293,26 @@ namespace controller {
                 nameTag,
                 empresa
             };
-
-            this.guardarPersonaAPI(persona);
+            this.updateUserAPI(persona);
         }
 
-        private guardarPersonaAPI(persona: entidades.IPersona): void {
+        public asignarUserData(userDataInstance: data.datoUsuarios): void {
+            this.userData = userDataInstance;
+        }
+
+        private updateUserAPI(persona: entidades.IPersona): void {
             const esNuevo = persona.id === 0;
 
             if (esNuevo) {
                 this.userData.createUserAPI(persona, (resp) => {
-                    console.log("Persona creada:", resp);
+                    // console.log("Persona creada:", resp);
                     this.responder(true);
                 });
             } else {
                 this.userData.updateUserAPI(persona, (resp) => {
-                    console.log("Persona actualizada:", resp);
+                    // console.log("Persona actualizada:", resp);
                     this.responder(true);
+                    0
                 });
             }
         }
@@ -339,9 +335,13 @@ namespace controller {
             this.selectEmpresa.property("value", "");
         }
 
-        private obtenerEmpresaSeleccionada(): number | null {
-            const valorSeleccionado = this.selectEmpresa.property("value");
-            return valorSeleccionado ? parseInt(valorSeleccionado) : null;
+        private cargarEmpresas(): void {
+            this.empresaData.loaderEmpresasAPI((resp: boolean) => {
+                if (resp) {
+                    this.empresas = this.empresaData.getEmpresas();
+                    this.llenarSelectEmpresas();
+                }
+            });
         }
 
         private llenarSelectEmpresas(): void {
@@ -354,6 +354,11 @@ namespace controller {
                 .attr("class", "empresa-option")
                 .attr("value", d => d.id.toString())
                 .text(d => d.nombre);
+        }
+
+        private obtenerEmpresaSeleccionada(): number | null {
+            const valorSeleccionado = this.selectEmpresa.property("value");
+            return valorSeleccionado ? parseInt(valorSeleccionado) : null;
         }
     }
 }

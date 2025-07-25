@@ -2,17 +2,7 @@ namespace data {
     export class datoEmpresas {
         private empresas: entidades.IEmpresa[] = []
 
-
-        public loaderEmpresasAPI(callback?: (resp: number) => void): void {
-            this.cargarEmpresas((resp: number) => {
-                if (callback) callback(resp);
-            });
-        }
-        public getEmpresas(): entidades.IEmpresa[] {
-            return this.empresas;
-        }
-
-        private cargarEmpresas(callback: (resp: number) => void): void {
+        public loaderEmpresasAPI(callback?: (resp: boolean) => void): void {
             const url = config.ApiConfig.API_EMPRESAS;
 
             fetch(url, {
@@ -33,14 +23,17 @@ namespace data {
                     this.empresas = empresas;
 
                     if (callback)
-                        callback(data.length);
+                        callback(true);
                 })
                 .catch(error => {
                     console.error("Error al consultar empresas:", error);
                     if (callback) {
-                        callback(-100);
+                        callback(false);
                     }
                 });
+        }
+        public getEmpresas(): entidades.IEmpresa[] {
+            return this.empresas;
         }
     }
 }
