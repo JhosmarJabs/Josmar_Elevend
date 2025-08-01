@@ -53,7 +53,6 @@ namespace view {
                 (confirmar: boolean) => {
                     if (confirmar) {
                         console.log(this.userData.getUsersArray(), "Formulario Cerrado");
-                        // this.cargarUsuariosPU();
                         this.actualizarArrayUsuarios();
                     }
                 }
@@ -516,3 +515,4 @@ namespace view {
 
     }
 }
+

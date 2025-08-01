@@ -1,4 +1,5 @@
 namespace controller {
+    // renombrar a confirmacion 
     export class eliminacion {
         private VentanaEliminacion: d3.Selection<HTMLDivElement, any, any, any>;
         private capaBloqueo: d3.Selection<HTMLDivElement, any, any, any>;

@@ -1,5 +1,6 @@
 namespace Data {
     export class Respuesta {
+        // mover 
         private notificacion: entidades.iNotificacion;
         private _notificacion: controller.Notificacion;
 

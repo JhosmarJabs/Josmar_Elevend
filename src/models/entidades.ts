@@ -8,10 +8,11 @@ namespace entidades {
     }
 
     export enum eNotificacion {
-        Success = "success",
-        Error = "error",
-        Warning = "warning",
-        Info = "info"
+
+        Success = 1,
+        Error = 2,
+        Warning = 3,
+        Info = 4
     }
     
     export interface IEmpresa {

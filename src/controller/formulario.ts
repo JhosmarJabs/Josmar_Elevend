@@ -1,4 +1,5 @@
 namespace controller {
+    // mover a vista
     export class formulario {
         // Controladores
         private empresaData = new data.datoEmpresas();

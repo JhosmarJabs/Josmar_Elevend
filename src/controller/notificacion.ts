@@ -20,6 +20,26 @@ namespace controller {
                 .style('max-width', '400px')
                 .style('width', 'auto');
         }
+        
+        public cerrar(alertId: string): void {
+            const alertData = this.alerts.get(alertId);
+            if (!alertData) return;
+
+            const { element, timer } = alertData;
+
+            clearTimeout(timer);
+
+            element
+                .transition()
+                .duration(300)
+                .ease(d3.easeBackIn)
+                .style('transform', 'translateX(400px)')
+                .style('opacity', 0)
+                .on('end', () => {
+                    element.remove();
+                    this.alerts.delete(alertId);
+                });
+        }
 
         public mostrar(notificacion: entidades.iNotificacion): string {
             const duration = 5000;
@@ -73,7 +93,7 @@ namespace controller {
                 .style('display', 'flex')
                 .style('align-items', 'center')
                 .style('justify-content', 'center')
-                .style('color', notificacion.type === 'warning' ? '#333' : 'white')
+                .style('color', notificacion.type === 3 ? '#333' : 'white')
                 .style('font-size', '12px')
                 .style('font-weight', 'bold')
                 .style('flex-shrink', '0')
@@ -174,24 +194,6 @@ namespace controller {
             return alertId;
         }
 
-        public cerrar(alertId: string): void {
-            const alertData = this.alerts.get(alertId);
-            if (!alertData) return;
 
-            const { element, timer } = alertData;
-
-            clearTimeout(timer);
-
-            element
-                .transition()
-                .duration(300)
-                .ease(d3.easeBackIn)
-                .style('transform', 'translateX(400px)')
-                .style('opacity', 0)
-                .on('end', () => {
-                    element.remove();
-                    this.alerts.delete(alertId);
-                });
-        }
     }
 }
